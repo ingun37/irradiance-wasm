@@ -3,9 +3,14 @@ import * as wasm from "irradiance-wasm";
 import { useEffect } from "react";
 import {
   BoxGeometry,
+  BufferAttribute,
+  BufferGeometry,
+  Float32BufferAttribute,
   Mesh,
   MeshBasicMaterial,
   PerspectiveCamera,
+  Points,
+  PointsMaterial,
   Scene,
   WebGLRenderer,
 } from "three";
@@ -25,14 +30,17 @@ const Wasm = () => {
     document.getElementById(consts.threeDivId).appendChild(renderer.domElement);
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.addEventListener("change", () => renderer.render(scene, camera));
-    const geometry = new BoxGeometry();
-    const material = new MeshBasicMaterial({ color: 0x00ff00 });
-    const cube = new Mesh(geometry, material);
-    scene.add(cube);
+    const geometry = new BufferGeometry();
+
+    const arr = wasm.fibonacci_hemi_sphere(1000);
+
+    geometry.setAttribute("position", new Float32BufferAttribute(arr, 3));
+    const material = new PointsMaterial({ color: 0x00ff00, size: 0.05 });
+    const points = new Points(geometry, material);
+    scene.add(points);
 
     camera.position.z = 5;
     requestAnimationFrame(() => renderer.render(scene, camera));
-    const arr = wasm.fibonacci_hemi_sphere(10);
   });
   return (
     <div

@@ -16,10 +16,13 @@
   },
   "dependencies": {
     "gatsby": "^4.6.0",
+    "irradiance-wasm": "file:../pkg",
     "prettier": "^2.5.1",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
-    "three": "^0.137.5",
-    "irradiance-wasm": "file:../pkg"
+    "three": "^0.137.5"
+  },
+  "devDependencies": {
+    "@types/three": "^0.137.0"
   }
 }

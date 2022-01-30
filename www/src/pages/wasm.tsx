@@ -10,6 +10,7 @@ import {
   WebGLRenderer,
 } from "three";
 import * as consts from "../consts";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 const Wasm = () => {
   useEffect(() => {
     const scene = new Scene();
@@ -22,7 +23,8 @@ const Wasm = () => {
     const renderer = new WebGLRenderer();
     renderer.setSize(consts.weight, consts.height);
     document.getElementById(consts.threeDivId).appendChild(renderer.domElement);
-
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.addEventListener("change", () => renderer.render(scene, camera));
     const geometry = new BoxGeometry();
     const material = new MeshBasicMaterial({ color: 0x00ff00 });
     const cube = new Mesh(geometry, material);

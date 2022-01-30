@@ -1,6 +1,6 @@
 use image::hdr::{HDREncoder, RGBE8Pixel};
 use image::Rgb;
-use nalgebra::{Quaternion, UnitVector2, UnitVector3, Vector2, Vector3};
+use nalgebra::{Quaternion, Rotation3, UnitVector2, UnitVector3, Vector2, Vector3};
 use std::f32::consts::PI;
 use std::io::{Cursor, Write};
 
@@ -47,6 +47,32 @@ pub fn sample_equirect(
     let j = (v * (height as f32)) as usize;
     return img[width * j + i];
 }
+fn gen_side(
+    read: &Vec<RGBE8Pixel>,
+    width: usize,
+    height: usize,
+    env_map_size: usize,
+    side_rot:Rotation3<f32>,
+) -> Result<Vec<u8>, std::io::Error> {
+    let mut buf: Vec<u8> = Vec::new();
+    let encoder = HDREncoder::new(&mut buf);
+    let mut pixels: Vec<Rgb<f32>> = Vec::new();
+    let env_map_size_half = env_map_size as f32 / 2f32;
+    // encoder.encode(data: &[Rgb<f32>], width: usize, height: usize)
+    for i in 0..env_map_size {
+        for j in 0..env_map_size {
+            let v = Vector3::new(-(j as f32 - env_map_size_half),env_map_size_half,-(i as f32 - env_map_size_half));
+            let v_ = side_rot * v;
+
+            let sample = sample_equirect(read, width, height, v_.x, v_.y, v_.z);
+            pixels.push(sample.to_hdr());
+        }
+    }
+    // return Ok(buf);
+    return encoder
+        .encode(pixels.as_slice(), env_map_size, env_map_size)
+        .map(|_| buf);
+}
 pub fn gen_env_map(
     read: &Vec<RGBE8Pixel>,
     width: usize,
@@ -60,21 +86,24 @@ pub fn gen_env_map(
     // let cursor: Cursor<Vec<u8>> = Cursor::new(mut_buf_ref);
     let encoder = HDREncoder::new(&mut buf);
 
-    let mut pixels: Vec<Rgb<f32>> = Vec::new();
-    // encoder.encode(data: &[Rgb<f32>], width: usize, height: usize)
-    for i in 0..env_map_size {
-        for j in 0..env_map_size {
-            let vx = -(j as f32 - env_map_size_half);
-            let vy = env_map_size_half;
-            let vz = -(i as f32 - env_map_size_half);
-            let sample = sample_equirect(read, width, height, vx, vy, vz);
-            pixels.push(sample.to_hdr());
-        }
-    }
-    // return Ok(buf);
-    return encoder
-        .encode(pixels.as_slice(), env_map_size, env_map_size)
-        .map(|_| buf);
+    let rotations: [Rotation3<f32>; 6] = {
+        let q = PI / 2f32;
+        let h = PI;
+        let t = q + h;
+        // PY,    NX,    PZ,    PX,    NZ,    NY,
+        let rotations: [Rotation3<f32>; 6] = [
+            Rotation3::from_euler_angles(0f32, 0f32, 0f32),
+            Rotation3::from_euler_angles(0f32, 0f32, q),
+            Rotation3::from_euler_angles(q, 0f32, 0f32),
+            Rotation3::from_euler_angles(0f32, 0f32, -q),
+            Rotation3::from_euler_angles(-q, 0f32, 0f32),
+            Rotation3::from_euler_angles(h, 0f32, 0f32),
+        ];
+        rotations
+    };
+
+    let bb = gen_side(read, width, height, env_map_size, rotations[0]);
+    return bb;
 }
 
 fn makeRotation(normalized_to: Vector3<f32>) -> Quaternion<f32> {

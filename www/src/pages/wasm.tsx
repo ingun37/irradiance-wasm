@@ -47,14 +47,24 @@ const Wasm = () => {
     camera.position.z = 5;
     requestAnimationFrame(() => renderer.render(scene, camera));
   });
+  const aaa = new Uint8Array([1, 2, 3, 4]);
+  const onclick = () => {
+    fetch("./pedestrian_overpass_1k.hdr")
+      .then((x) => x.arrayBuffer())
+      .then((x) => new Uint8Array(x))
+      .then((ab) => wasm.irradiance(ab));
+  };
   return (
-    <div
-      id={consts.threeDivId}
-      style={{
-        height: consts.height.toString() + "px",
-        width: consts.weight.toString() + "px",
-      }}
-    />
+    <div>
+      <button onClick={onclick}>click me</button>
+      <div
+        id={consts.threeDivId}
+        style={{
+          height: consts.height.toString() + "px",
+          width: consts.weight.toString() + "px",
+        }}
+      />
+    </div>
   );
 };
 export default Wasm;

@@ -58,29 +58,69 @@ pub fn irradiance(
     sample_size: u32,
     env_map_size: usize,
     buffer: &[u8],
-) -> Result<js_sys::Uint8Array, JsValue> {
+    callback: &js_sys::Function
+) 
+// -> Result<js_sys::Uint8Array, JsValue> 
+{
+    
     console_error_panic_hook::set_once();
     let buf_reader = BufReader::new(buffer);
     let decoder = HDRDecoder::new(buf_reader);
 
-    let envmap = decoder.and_then(|x| {
+    let mut envmaps = decoder.and_then(|x| {
         let meta = x.metadata();
-        return x.read_image_native().and_then(|pxls| 
+        return x.read_image_native().and_then(|pxls| {
             math::gen_env_map(
                 &pxls,
                 meta.width as usize,
                 meta.height as usize,
                 sample_size,
                 env_map_size,
-            ).map_err(ImageError::from)
-        );
+            )
+            .map_err(ImageError::from)
+        });
     });
 
-    let hh = envmap.map(|buf| js_sys::Uint8Array::from(buf.as_slice())).map_err(|e| {
-        console_log!("image error {}", e);
-        return JsValue::null();
-    });
-    return hh;
+    match envmaps {
+        Ok(envmaps) => {
+            for i in 0..envmaps.len() {
+                let envmap = &envmaps[i];
+                let ptr = envmap.as_ptr();
+                let bytelen = envmap.len();
+                let idx_js = JsValue::from(i);
+                let ptr_js = JsValue::from(ptr as u32);
+                let bytelen_js = JsValue::from(bytelen);
+                callback.call3(&JsValue::null(), &idx_js, &ptr_js, &bytelen_js);
+            }
+        }
+        Err(e) => {
+            console_log!("{}", e);
+        }
+    }
+
+
+    // let hh = envmap
+    //     .map(|mut bufs| {
+    //         let mut whole: Vec<u8> = Vec::new();
+    //         for buf in &mut bufs {
+    //             let sz = buf.len() as u32;
+    //             let b1: u8 = ((sz >> 24) & 0xff) as u8;
+    //             let b2: u8 = ((sz >> 16) & 0xff) as u8;
+    //             let b3: u8 = ((sz >> 8) & 0xff) as u8;
+    //             let b4: u8 = (sz & 0xff) as u8;
+    //             whole.push(b1);
+    //             whole.push(b2);
+    //             whole.push(b3);
+    //             whole.push(b4);
+    //             whole.append(buf);
+    //         }
+    //         js_sys::Uint8Array::from(whole.as_slice())
+    //     })
+    //     .map_err(|e| {
+    //         console_log!("image error {}", e);
+    //         return JsValue::null();
+    //     });
+    // return hh;
     // let kk = hdr.map(|pixels| gen_env_map(pixels, w,hdr))
     // match hdr {
     //     Ok(x) => {

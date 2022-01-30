@@ -21,6 +21,7 @@
     "prettier": "^2.5.1",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
+    "rxjs": "^7.5.2",
     "three": "^0.137.5"
   },
   "devDependencies": {

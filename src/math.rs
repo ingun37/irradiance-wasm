@@ -39,7 +39,7 @@ pub fn sample_equirect(
     z: f32,
 ) -> RGBE8Pixel {
     let tau = PI * 2f32;
-    let polar = x.atan2(z).rem_euclid(tau);
+    let polar = (x.atan2(z) + PI).rem_euclid(tau);
     let azimuth = Vector2::new(x, z).magnitude().atan2(y).rem_euclid(tau);
     let u = polar / tau;
     let v = azimuth / PI;
@@ -52,7 +52,7 @@ fn gen_side(
     width: usize,
     height: usize,
     env_map_size: usize,
-    side_rot:Rotation3<f32>,
+    side_rot:&Rotation3<f32>,
 ) -> Result<Vec<u8>, std::io::Error> {
     let mut buf: Vec<u8> = Vec::new();
     let encoder = HDREncoder::new(&mut buf);
@@ -61,7 +61,7 @@ fn gen_side(
     // encoder.encode(data: &[Rgb<f32>], width: usize, height: usize)
     for i in 0..env_map_size {
         for j in 0..env_map_size {
-            let v = Vector3::new(-(j as f32 - env_map_size_half),env_map_size_half,-(i as f32 - env_map_size_half));
+            let v = Vector3::new((j as f32 - env_map_size_half),env_map_size_half,(i as f32 - env_map_size_half));
             let v_ = side_rot * v;
 
             let sample = sample_equirect(read, width, height, v_.x, v_.y, v_.z);
@@ -79,7 +79,7 @@ pub fn gen_env_map(
     height: usize,
     sample_size: u32,
     env_map_size: usize,
-) -> Result<Vec<u8>, std::io::Error> {
+) -> Result<Vec<Vec<u8>>, std::io::Error> {
     let hemi = fibonacci_hemi_sphere(sample_size);
     let env_map_size_half = env_map_size as f32 / 2f32;
     let mut buf: Vec<u8> = Vec::new();
@@ -90,20 +90,28 @@ pub fn gen_env_map(
         let q = PI / 2f32;
         let h = PI;
         let t = q + h;
-        // PY,    NX,    PZ,    PX,    NZ,    NY,
+        // PY,  PZ,  NX,    NZ,   PX,        NY,
+        let xq = Rotation3::from_euler_angles(q, 0f32, 0f32);
+        let yq = Rotation3::from_euler_angles(0f32, q, 0f32);
         let rotations: [Rotation3<f32>; 6] = [
             Rotation3::from_euler_angles(0f32, 0f32, 0f32),
-            Rotation3::from_euler_angles(0f32, 0f32, q),
-            Rotation3::from_euler_angles(q, 0f32, 0f32),
-            Rotation3::from_euler_angles(0f32, 0f32, -q),
-            Rotation3::from_euler_angles(-q, 0f32, 0f32),
-            Rotation3::from_euler_angles(h, 0f32, 0f32),
+            xq,
+            yq * xq,
+            yq * yq * xq,
+            yq * yq * yq * xq,
+            xq * xq,
+            // Rotation3::from_euler_angles(0f32, q, 0f32),
+            // Rotation3::from_euler_angles(-q, 0f32, 0f32),
+            // Rotation3::from_euler_angles(0f32, -q, 0f32),
+            // Rotation3::from_euler_angles(0f32, 0f32, h),
         ];
         rotations
     };
 
-    let bb = gen_side(read, width, height, env_map_size, rotations[0]);
-    return bb;
+    let sides = rotations.iter().map(|r| gen_side(read, width, height, env_map_size, r));
+    return sides.collect();
+    // let bb = gen_side(read, width, height, env_map_size, rotations[0]);
+    // return bb;
 }
 
 fn makeRotation(normalized_to: Vector3<f32>) -> Quaternion<f32> {

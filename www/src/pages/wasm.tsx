@@ -1,6 +1,8 @@
 import * as React from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import * as wasm from "irradiance-wasm";
+import * as wasm_bg from "irradiance-wasm/irradiance_wasm_bg.wasm";
+
 import {
   BufferGeometry,
   Float32BufferAttribute,
@@ -15,8 +17,10 @@ import * as consts from "../consts";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { range } from "fp-ts/NonEmptyArray";
 import { downloadBlob } from "../util";
+import { interval, Subject, zip } from "rxjs";
 
 const Wasm = () => {
+  const [rx] = useState(new Subject<Uint8Array>());
   useEffect(() => {
     const scene = new Scene();
     const camera = new PerspectiveCamera(
@@ -47,14 +51,44 @@ const Wasm = () => {
 
     camera.position.z = 5;
     requestAnimationFrame(() => renderer.render(scene, camera));
-  });
-  const aaa = new Uint8Array([1, 2, 3, 4]);
+    zip(interval(2000), rx).subscribe({
+      next([idx, buf]) {
+        downloadBlob(buf, idx.toString() + ".hdr");
+      },
+    });
+  }, []);
   const onclick = () => {
     fetch("./venetian_crossroads_1k.hdr")
       .then((x) => x.arrayBuffer())
       .then((x) => new Uint8Array(x))
-      .then((ab) => wasm.irradiance(100, 128, ab))
-      .then((buf) => downloadBlob(buf, "a.hdr"));
+      .then((ab) => {
+        wasm.irradiance(
+          100,
+          64,
+          ab,
+          (idx: bigint, offset: number, size: bigint) => {
+            console.log(
+              idx,
+              offset,
+              size,
+              typeof idx,
+              typeof offset,
+              typeof size
+            );
+            const hdrBuf = new Uint8Array(
+              wasm_bg.memory.buffer,
+              offset,
+              Number(size)
+            );
+            const cp = new Uint8Array(new ArrayBuffer(Number(size)));
+            cp.set(hdrBuf);
+            rx.next(cp);
+
+            // console.log("aaa", x, y);
+          }
+        );
+      });
+    // .then((buf) => downloadBlob(buf, "a.hdr"));
   };
   return (
     <div>

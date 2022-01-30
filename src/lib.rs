@@ -1,6 +1,7 @@
 mod math;
 mod utils;
 use image::hdr::HDRDecoder;
+use image::ImageError;
 use js_sys;
 use std::io::BufReader;
 use wasm_bindgen::prelude::*;
@@ -54,24 +55,39 @@ pub fn fibonacci_hemi_sphere(sample_size: u32) -> js_sys::Float32Array {
 #[wasm_bindgen]
 pub fn irradiance(
     // hdr_bytes:js_sys::Uint8Array
+    sample_size: u32,
+    env_map_size: usize,
     buffer: &[u8],
-) {
-    // let in_vec = hdr_bytes.to_vec();
-    // let in_cursor = Cursor::new(in_vec);
+) -> Result<js_sys::Uint8Array, JsValue> {
+    console_error_panic_hook::set_once();
     let buf_reader = BufReader::new(buffer);
-    let hdr = HDRDecoder::new(buf_reader).and_then(|x| x.read_image_native());
-    // let str1 = buffer[0].to_string();
-    // let str2 = buffer[1].to_string();
-    // let str3 = buffer[2].to_string();
+    let decoder = HDRDecoder::new(buf_reader);
 
-    // alert(hh.as_str());
-    match hdr {
-        Ok(x) => {
-            console_log!("image len {}", x.len());
-        }
-        Err(e) => {
-            console_log!("error {}", e)
-        }
-    }
+    let envmap = decoder.and_then(|x| {
+        let meta = x.metadata();
+        return x.read_image_native().and_then(|pxls| 
+            math::gen_env_map(
+                &pxls,
+                meta.width as usize,
+                meta.height as usize,
+                sample_size,
+                env_map_size,
+            ).map_err(ImageError::from)
+        );
+    });
 
+    let hh = envmap.map(|buf| js_sys::Uint8Array::from(buf.as_slice())).map_err(|e| {
+        console_log!("image error {}", e);
+        return JsValue::null();
+    });
+    return hh;
+    // let kk = hdr.map(|pixels| gen_env_map(pixels, w,hdr))
+    // match hdr {
+    //     Ok(x) => {
+    //         console_log!("image len {}", x.len());
+    //     }
+    //     Err(e) => {
+    //         console_log!("error {}", e)
+    //     }
+    // }
 }

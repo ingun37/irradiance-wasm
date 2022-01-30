@@ -14,6 +14,7 @@ import {
 import * as consts from "../consts";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { range } from "fp-ts/NonEmptyArray";
+import { downloadBlob } from "../util";
 
 const Wasm = () => {
   useEffect(() => {
@@ -52,7 +53,8 @@ const Wasm = () => {
     fetch("./pedestrian_overpass_1k.hdr")
       .then((x) => x.arrayBuffer())
       .then((x) => new Uint8Array(x))
-      .then((ab) => wasm.irradiance(ab));
+      .then((ab) => wasm.irradiance(100, 128, ab))
+      .then((buf) => downloadBlob(buf, "a.hdr"));
   };
   return (
     <div>

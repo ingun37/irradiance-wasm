@@ -15,6 +15,7 @@
     "clean": "gatsby clean"
   },
   "dependencies": {
+    "fp-ts": "^2.11.8",
     "gatsby": "^4.6.0",
     "irradiance-wasm": "file:../pkg",
     "prettier": "^2.5.1",

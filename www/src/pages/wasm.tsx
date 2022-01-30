@@ -1,21 +1,20 @@
 import * as React from "react";
-import * as wasm from "irradiance-wasm";
 import { useEffect } from "react";
+import * as wasm from "irradiance-wasm";
 import {
-  BoxGeometry,
-  BufferAttribute,
   BufferGeometry,
   Float32BufferAttribute,
-  Mesh,
-  MeshBasicMaterial,
   PerspectiveCamera,
   Points,
   PointsMaterial,
   Scene,
+  Vector3,
   WebGLRenderer,
 } from "three";
 import * as consts from "../consts";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { range } from "fp-ts/NonEmptyArray";
+
 const Wasm = () => {
   useEffect(() => {
     const scene = new Scene();
@@ -32,9 +31,15 @@ const Wasm = () => {
     controls.addEventListener("change", () => renderer.render(scene, camera));
     const geometry = new BufferGeometry();
 
-    const arr = wasm.fibonacci_hemi_sphere(1000);
+    const arr = wasm.fibonacci_hemi_sphere(300);
 
-    geometry.setAttribute("position", new Float32BufferAttribute(arr, 3));
+    const weightedPoints = range(0, arr.length / 4 - 1).map((i) =>
+      new Vector3(arr[i * 4], arr[i * 4 + 1], arr[i * 4 + 2]).multiplyScalar(
+        arr[i * 4 + 3]
+      )
+    );
+    geometry.setFromPoints(weightedPoints);
+    // geometry.setAttribute("position", new Float32BufferAttribute(arr, 4));
     const material = new PointsMaterial({ color: 0x00ff00, size: 0.05 });
     const points = new Points(geometry, material);
     scene.add(points);

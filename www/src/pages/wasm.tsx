@@ -9,19 +9,19 @@ import {
   Scene,
   WebGLRenderer,
 } from "three";
-
+import * as consts from "../consts";
 const Wasm = () => {
   useEffect(() => {
     const scene = new Scene();
     const camera = new PerspectiveCamera(
       75,
-      window.innerWidth / window.innerHeight,
+      consts.weight / consts.height,
       0.1,
       1000
     );
     const renderer = new WebGLRenderer();
-    renderer.setSize(512, 512);
-    document.getElementById("wasmDiv").appendChild(renderer.domElement);
+    renderer.setSize(consts.weight, consts.height);
+    document.getElementById(consts.threeDivId).appendChild(renderer.domElement);
 
     const geometry = new BoxGeometry();
     const material = new MeshBasicMaterial({ color: 0x00ff00 });
@@ -32,6 +32,14 @@ const Wasm = () => {
     requestAnimationFrame(() => renderer.render(scene, camera));
     const arr = wasm.fibonacci_hemi_sphere(10);
   });
-  return <div id="wasmDiv" style={{ height: "512px", width: "512px" }} />;
+  return (
+    <div
+      id={consts.threeDivId}
+      style={{
+        height: consts.height.toString() + "px",
+        width: consts.weight.toString() + "px",
+      }}
+    />
+  );
 };
 export default Wasm;

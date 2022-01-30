@@ -38,12 +38,11 @@ pub fn sample_equirect(
     y: f32,
     z: f32,
 ) -> RGBE8Pixel {
-    let xz = Vector2::new(x, z);
     let tau = PI * 2f32;
     let polar = x.atan2(z).rem_euclid(tau);
-    let azimuth = xz.magnitude().atan2(y).rem_euclid(tau);
+    let azimuth = Vector2::new(x, z).magnitude().atan2(y).rem_euclid(tau);
     let u = polar / tau;
-    let v = azimuth / tau;
+    let v = azimuth / PI;
     let i = (u * (width as f32)) as usize;
     let j = (v * (height as f32)) as usize;
     return img[width * j + i];
@@ -65,9 +64,9 @@ pub fn gen_env_map(
     // encoder.encode(data: &[Rgb<f32>], width: usize, height: usize)
     for i in 0..env_map_size {
         for j in 0..env_map_size {
-            let vx = i as f32 - env_map_size_half;
+            let vx = -(j as f32 - env_map_size_half);
             let vy = env_map_size_half;
-            let vz = j as f32 - env_map_size_half;
+            let vz = -(i as f32 - env_map_size_half);
             let sample = sample_equirect(read, width, height, vx, vy, vz);
             pixels.push(sample.to_hdr());
         }

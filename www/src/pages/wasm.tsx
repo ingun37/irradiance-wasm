@@ -50,7 +50,7 @@ const Wasm = () => {
   });
   const aaa = new Uint8Array([1, 2, 3, 4]);
   const onclick = () => {
-    fetch("./pedestrian_overpass_1k.hdr")
+    fetch("./venetian_crossroads_1k.hdr")
       .then((x) => x.arrayBuffer())
       .then((x) => new Uint8Array(x))
       .then((ab) => wasm.irradiance(100, 128, ab))

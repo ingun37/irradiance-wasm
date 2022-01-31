@@ -63,7 +63,7 @@ const Wasm = () => {
       .then((x) => new Uint8Array(x))
       .then((ab) => {
         wasm.irradiance(
-          100,
+          10000,
           64,
           ab,
           (idx: bigint, offset: number, size: bigint) => {

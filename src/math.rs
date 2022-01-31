@@ -4,9 +4,9 @@ use nalgebra::{Quaternion, Rotation3, UnitVector2, UnitVector3, Vector2, Vector3
 use std::f32::consts::PI;
 use std::io::{Cursor, Write};
 
-pub fn fibonacci_hemi_sphere(sample_size: u32) -> Vec<f32> {
+pub fn fibonacci_hemi_sphere(sample_size: u32) -> Vec<(Vector3<f32>, f32)> {
     let phi = PI * ((3f32) - (5f32).sqrt());
-    let mut points: Vec<f32> = Vec::with_capacity((sample_size as usize) * 4);
+    let mut points: Vec<(Vector3<f32>, f32)> = Vec::with_capacity((sample_size as usize) * 4);
     let sample_size_f = sample_size as f32;
     for i in 0..sample_size {
         let i_f = i as f32;
@@ -15,10 +15,7 @@ pub fn fibonacci_hemi_sphere(sample_size: u32) -> Vec<f32> {
         let theta = phi * i_f; //  # golden angle increment
         let x = theta.cos() * radius;
         let z = theta.sin() * radius;
-        points.push(x);
-        points.push(y);
-        points.push(z);
-        points.push(y.asin());
+        points.push((Vector3::new(x, y, z), y.asin()));
     }
     return points;
 }
@@ -47,12 +44,14 @@ pub fn sample_equirect(
     let j = (v * (height as f32)) as usize;
     return img[width * j + i];
 }
+static UP: Vector3<f32> = Vector3::new(0f32, 1f32, 0f32);
 fn gen_side(
     read: &Vec<RGBE8Pixel>,
     width: usize,
     height: usize,
     env_map_size: usize,
-    side_rot:&Rotation3<f32>,
+    side_rot: &Rotation3<f32>,
+    hemi: &Vec<(Vector3<f32>, f32)>,
 ) -> Result<Vec<u8>, std::io::Error> {
     let mut buf: Vec<u8> = Vec::new();
     let encoder = HDREncoder::new(&mut buf);
@@ -61,11 +60,28 @@ fn gen_side(
     // encoder.encode(data: &[Rgb<f32>], width: usize, height: usize)
     for i in 0..env_map_size {
         for j in 0..env_map_size {
-            let v = Vector3::new((j as f32 - env_map_size_half),env_map_size_half,(i as f32 - env_map_size_half));
-            let v_ = side_rot * v;
+            let _dir = Vector3::new(
+                j as f32 - env_map_size_half,
+                env_map_size_half,
+                i as f32 - env_map_size_half,
+            );
+            let dir = side_rot * _dir;
+            let mut rot_try = Rotation3::rotation_between(&UP, &dir);
+            let rot = rot_try.get_or_insert(Rotation3::from_euler_angles(0f32, 0f32, PI));
 
-            let sample = sample_equirect(read, width, height, v_.x, v_.y, v_.z);
-            pixels.push(sample.to_hdr());
+            let mut sum = Vector3::new(0f32, 0f32, 0f32);
+            let hemi_len_f = hemi.len() as f32;
+            for (_v, w) in hemi {
+                let v = (*rot) * _v;
+                let sample = sample_equirect(read, width, height, v.x, v.y, v.z);
+                let rgb = sample.to_hdr();
+                sum += Vector3::new(rgb[0], rgb[1], rgb[2]) * (*w) / hemi_len_f;
+            }
+            sum *= PI;
+
+            pixels.push(image::Rgb {
+                data: [sum.x, sum.y, sum.z],
+            });
         }
     }
     // return Ok(buf);
@@ -108,7 +124,9 @@ pub fn gen_env_map(
         rotations
     };
 
-    let sides = rotations.iter().map(|r| gen_side(read, width, height, env_map_size, r));
+    let sides = rotations
+        .iter()
+        .map(|r| gen_side(read, width, height, env_map_size, r, &hemi));
     return sides.collect();
     // let bb = gen_side(read, width, height, env_map_size, rotations[0]);
     // return bb;

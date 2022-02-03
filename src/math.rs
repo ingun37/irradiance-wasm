@@ -123,11 +123,54 @@ fn hammersley(i: u32, n: u32) -> Vector2<f32> {
     return Vector2::new((i as f32) / (n as f32), radical_inverse_vdc(i));
 }
 
+fn vec3(x: f32, y: f32, z: f32) -> Vector3<f32> {
+    Vector3::new(x, y, z)
+}
+
 pub fn low_discrepancy_sample_vectors(sample_size:usize) -> Vec<Vector2<f32>> {
     let mut buf:Vec<Vector2<f32>> = Vec::with_capacity(sample_size);
     for i in 0..sample_size {
         let xi = hammersley(i as u32, sample_size as u32);
         buf.push(xi);
+    }
+    return buf;
+}
+
+fn importance_sample_ggx(xi: Vector2<f32>, n: Vector3<f32>, roughness: f32) -> Vector3<f32> {
+    let a = roughness * roughness;
+    let phi = 2f32 * PI * xi.x;
+    let cosTheta = ((1.0 - xi.y) / (1.0 + (a * a - 1.0) * xi.y)).sqrt();
+    let sinTheta = (1.0 - cosTheta * cosTheta).sqrt();
+
+    // from spherical coordinates to cartesian coordinates
+    let h: Vector3<f32> = Vector3::new(phi.cos() * sinTheta, phi.sin() * sinTheta, cosTheta);
+
+    // from tangent-space vector to world-spcae sample vector
+    let up = if (n.z).abs() < 0.999 {
+        vec3(0.0, 0.0, 1.0)
+    } else {
+        vec3(1.0, 0.0, 0.0)
+    };
+
+    let tangent = up.cross(&n).normalize();
+    let bitangent = n.cross(&tangent);
+    let sample_vec = h.x * tangent + bitangent * h.y + n * h.z;
+    return sample_vec.normalize();
+}
+
+pub fn importance_sample_vectors(
+    nx: f32,
+    ny: f32,
+    nz: f32,
+    roughness: f32,
+    sample_size: usize,
+) -> Vec<Vector3<f32>> {
+    let mut buf: Vec<Vector3<f32>> = Vec::with_capacity(sample_size);
+    for i in 0..sample_size {
+        let xi = hammersley(i as u32, sample_size as u32);
+        let n = Vector3::new(nx, ny, nz).normalize();
+        let h = importance_sample_ggx(xi, n, roughness);
+        buf.push(h);
     }
     return buf;
 }

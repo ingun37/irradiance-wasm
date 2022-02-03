@@ -2,6 +2,7 @@ import * as React from "react";
 import DiffuseIrradiance from "./diffuse-irradiance";
 import Hammersley from "./hammersley";
 import FibonacciSphere from "./fibonacci-sphere";
+import ImportanceSampleVectors from "./importance-sample-vectors";
 
 // styles
 const pageStyles = {
@@ -148,6 +149,7 @@ const IndexPage = () => {
       <DiffuseIrradiance />
       <FibonacciSphere />
       <Hammersley />
+      <ImportanceSampleVectors />
     </main>
   );
 };

@@ -9,6 +9,7 @@ import {
   PointsMaterial,
   Scene,
   Vector2,
+  Vector3,
   WebGLRenderer,
 } from "three";
 import * as consts from "../consts";
@@ -16,7 +17,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { range } from "fp-ts/NonEmptyArray";
 import { makeIndicator } from "../util";
 
-const Hammersley = () => {
+const ImportanceSampleVectors = () => {
   useEffect(() => {
     const scene = new Scene();
     const camera = new PerspectiveCamera(
@@ -31,10 +32,10 @@ const Hammersley = () => {
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.addEventListener("change", () => renderer.render(scene, camera));
     const geometry = new BufferGeometry();
-    const arr = wasm.low_discrepancy_sample_vectors(300);
+    const arr = wasm.importance_sample_vectors(0, 1, 0, 1, 30);
 
-    const weightedPoints = range(0, arr.length / 2 - 1).map(
-      (i) => new Vector2(arr[i * 2], arr[i * 2 + 1])
+    const weightedPoints = range(0, arr.length / 3 - 1).map(
+      (i) => new Vector3(arr[i * 3], arr[i * 3 + 1], arr[i * 3 + 2])
     );
     geometry.setFromPoints(weightedPoints);
     // geometry.setAttribute("position", new Float32BufferAttribute(arr, 4));
@@ -58,4 +59,4 @@ const Hammersley = () => {
     </div>
   );
 };
-export default Hammersley;
+export default ImportanceSampleVectors;

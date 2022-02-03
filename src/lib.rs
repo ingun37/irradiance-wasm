@@ -69,6 +69,23 @@ pub fn low_discrepancy_sample_vectors(sample_size: u32) -> js_sys::Float32Array 
 }
 
 #[wasm_bindgen]
+pub fn importance_sample_vectors(
+    nx: f32,
+    ny: f32,
+    nz: f32,
+    roughness: f32,
+    sample_size: u32,
+) -> js_sys::Float32Array {
+    let rust_array = math::importance_sample_vectors(nx, ny, nz, roughness, sample_size as usize);
+    let fs: Vec<f32> = rust_array
+        .iter()
+        .map(|v| vec![v.x, v.y, v.z])
+        .flatten()
+        .collect();
+    return js_sys::Float32Array::from(fs.as_slice());
+}
+
+#[wasm_bindgen]
 pub fn irradiance(
     // hdr_bytes:js_sys::Uint8Array
     sample_size: u32,

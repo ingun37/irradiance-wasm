@@ -8,14 +8,15 @@ import {
   Points,
   PointsMaterial,
   Scene,
-  Vector3,
+  Vector2,
   WebGLRenderer,
 } from "three";
 import * as consts from "../consts";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { range } from "fp-ts/NonEmptyArray";
+import { makeIndicator } from "../util";
 
-const Wasm = () => {
+const Hammersley = () => {
   useEffect(() => {
     const scene = new Scene();
     const camera = new PerspectiveCamera(
@@ -31,19 +32,17 @@ const Wasm = () => {
     controls.addEventListener("change", () => renderer.render(scene, camera));
     const geometry = new BufferGeometry();
 
-    const arr = wasm.fibonacci_hemi_sphere(300);
+    const arr = wasm.low_discrepancy_sample_vectors(300);
 
-    const weightedPoints = range(0, arr.length / 4 - 1).map((i) =>
-      new Vector3(arr[i * 4], arr[i * 4 + 1], arr[i * 4 + 2]).multiplyScalar(
-        arr[i * 4 + 3]
-      )
+    const weightedPoints = range(0, arr.length / 2 - 1).map(
+      (i) => new Vector2(arr[i * 2], arr[i * 2 + 1])
     );
     geometry.setFromPoints(weightedPoints);
     // geometry.setAttribute("position", new Float32BufferAttribute(arr, 4));
-    const material = new PointsMaterial({ color: 0x00ff00, size: 0.05 });
+    const material = new PointsMaterial({ color: 0xffff00, size: 0.02 });
     const points = new Points(geometry, material);
     scene.add(points);
-
+    scene.add(makeIndicator());
     camera.position.z = 5;
     requestAnimationFrame(() => renderer.render(scene, camera));
   }, []);
@@ -60,4 +59,4 @@ const Wasm = () => {
     </div>
   );
 };
-export default Wasm;
+export default Hammersley;

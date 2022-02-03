@@ -110,3 +110,24 @@ pub fn gen_irradiance_diffuse_map(
         .map(|r| gen_side(read, width, height, env_map_size, r, &hemi));
     return sides.collect();
 }
+fn radical_inverse_vdc(mut bits: u32) -> f32 {
+    bits = (bits << 16) | (bits >> 16);
+    bits = ((bits & 0x55555555) << 1) | ((bits & 0xAAAAAAAA) >> 1);
+    bits = ((bits & 0x33333333) << 2) | ((bits & 0xCCCCCCCC) >> 2);
+    bits = ((bits & 0x0F0F0F0F) << 4) | ((bits & 0xF0F0F0F0) >> 4);
+    bits = ((bits & 0x00FF00FF) << 8) | ((bits & 0xFF00FF00) >> 8);
+    return (bits as f32) * 2.3283064365386963e-10; // / 0x100000000
+}
+
+fn hammersley(i: u32, n: u32) -> Vector2<f32> {
+    return Vector2::new((i as f32) / (n as f32), radical_inverse_vdc(i));
+}
+
+pub fn low_discrepancy_sample_vectors(sample_size:usize) -> Vec<Vector2<f32>> {
+    let mut buf:Vec<Vector2<f32>> = Vec::with_capacity(sample_size);
+    for i in 0..sample_size {
+        let xi = hammersley(i as u32, sample_size as u32);
+        buf.push(xi);
+    }
+    return buf;
+}

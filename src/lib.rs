@@ -71,7 +71,7 @@ pub fn irradiance(
     let mut envmaps = decoder.and_then(|x| {
         let meta = x.metadata();
         return x.read_image_native().and_then(|pxls| {
-            math::gen_env_map(
+            math::gen_irradiance_diffuse_map(
                 &pxls,
                 meta.width as usize,
                 meta.height as usize,
@@ -122,7 +122,7 @@ pub fn irradiance(
     //         return JsValue::null();
     //     });
     // return hh;
-    // let kk = hdr.map(|pixels| gen_env_map(pixels, w,hdr))
+    // let kk = hdr.map(|pixels| gen_irradiance_diffuse_map(pixels, w,hdr))
     // match hdr {
     //     Ok(x) => {
     //         console_log!("image len {}", x.len());

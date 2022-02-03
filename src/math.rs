@@ -89,7 +89,7 @@ fn gen_side(
         .encode(pixels.as_slice(), env_map_size, env_map_size)
         .map(|_| buf);
 }
-pub fn gen_env_map(
+pub fn gen_irradiance_diffuse_map(
     read: &Vec<RGBE8Pixel>,
     width: usize,
     height: usize,

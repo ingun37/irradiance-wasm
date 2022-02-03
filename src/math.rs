@@ -1,8 +1,7 @@
 use image::hdr::{HDREncoder, RGBE8Pixel};
 use image::Rgb;
-use nalgebra::{Quaternion, Rotation3, UnitVector2, UnitVector3, Vector2, Vector3};
+use nalgebra::{Rotation3, Vector2, Vector3};
 use std::f32::consts::PI;
-use std::io::{Cursor, Write};
 
 pub fn fibonacci_hemi_sphere(sample_size: u32) -> Vec<(Vector3<f32>, f32)> {
     let phi = PI * ((3f32) - (5f32).sqrt());
@@ -19,13 +18,6 @@ pub fn fibonacci_hemi_sphere(sample_size: u32) -> Vec<(Vector3<f32>, f32)> {
     }
     return points;
 }
-
-// vecToSpherical :: V3 Double -> V2 Double
-// vecToSpherical v =
-//   let (V3 x y z) = v
-//       polar = atan2 y x
-//       azimuth = atan2 (norm (V2 x y)) z
-//    in V2 (withInTau polar) (withInTau azimuth)
 
 pub fn sample_equirect(
     img: &Vec<RGBE8Pixel>,
@@ -97,15 +89,8 @@ pub fn gen_irradiance_diffuse_map(
     env_map_size: usize,
 ) -> Result<Vec<Vec<u8>>, std::io::Error> {
     let hemi = fibonacci_hemi_sphere(sample_size);
-    let env_map_size_half = env_map_size as f32 / 2f32;
-    let mut buf: Vec<u8> = Vec::new();
-    // let cursor: Cursor<Vec<u8>> = Cursor::new(mut_buf_ref);
-    let encoder = HDREncoder::new(&mut buf);
-
     let rotations: [Rotation3<f32>; 6] = {
         let q = PI / 2f32;
-        let h = PI;
-        let t = q + h;
         // PY,  PZ,  NX,    NZ,   PX,        NY,
         let xq = Rotation3::from_euler_angles(q, 0f32, 0f32);
         let yq = Rotation3::from_euler_angles(0f32, q, 0f32);
@@ -116,10 +101,6 @@ pub fn gen_irradiance_diffuse_map(
             yq * yq * xq,
             yq * yq * yq * xq,
             xq * xq,
-            // Rotation3::from_euler_angles(0f32, q, 0f32),
-            // Rotation3::from_euler_angles(-q, 0f32, 0f32),
-            // Rotation3::from_euler_angles(0f32, -q, 0f32),
-            // Rotation3::from_euler_angles(0f32, 0f32, h),
         ];
         rotations
     };
@@ -128,14 +109,4 @@ pub fn gen_irradiance_diffuse_map(
         .iter()
         .map(|r| gen_side(read, width, height, env_map_size, r, &hemi));
     return sides.collect();
-    // let bb = gen_side(read, width, height, env_map_size, rotations[0]);
-    // return bb;
-}
-
-fn makeRotation(normalized_to: Vector3<f32>) -> Quaternion<f32> {
-    let anchor = Vector3::new(0f32, 1f32, 0f32);
-    let c = anchor.cross(&normalized_to);
-    let w = anchor.dot(&normalized_to) + 1f32;
-    let q = Quaternion::new(w, c.x, c.y, c.z);
-    return q;
 }

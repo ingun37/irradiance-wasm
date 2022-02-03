@@ -68,7 +68,7 @@ pub fn irradiance(
     let buf_reader = BufReader::new(buffer);
     let decoder = HDRDecoder::new(buf_reader);
 
-    let mut envmaps = decoder.and_then(|x| {
+    let irradiance_diffuse_maps = decoder.and_then(|x| {
         let meta = x.metadata();
         return x.read_image_native().and_then(|pxls| {
             math::gen_irradiance_diffuse_map(
@@ -82,12 +82,12 @@ pub fn irradiance(
         });
     });
 
-    match envmaps {
-        Ok(envmaps) => {
-            for i in 0..envmaps.len() {
-                let envmap = &envmaps[i];
-                let ptr = envmap.as_ptr();
-                let bytelen = envmap.len();
+    match irradiance_diffuse_maps {
+        Ok(maps) => {
+            for i in 0..maps.len() {
+                let map = &maps[i];
+                let ptr = map.as_ptr();
+                let bytelen = map.len();
                 let idx_js = JsValue::from(i);
                 let ptr_js = JsValue::from(ptr as u32);
                 let bytelen_js = JsValue::from(bytelen);
@@ -98,37 +98,4 @@ pub fn irradiance(
             console_log!("{}", e);
         }
     }
-
-
-    // let hh = envmap
-    //     .map(|mut bufs| {
-    //         let mut whole: Vec<u8> = Vec::new();
-    //         for buf in &mut bufs {
-    //             let sz = buf.len() as u32;
-    //             let b1: u8 = ((sz >> 24) & 0xff) as u8;
-    //             let b2: u8 = ((sz >> 16) & 0xff) as u8;
-    //             let b3: u8 = ((sz >> 8) & 0xff) as u8;
-    //             let b4: u8 = (sz & 0xff) as u8;
-    //             whole.push(b1);
-    //             whole.push(b2);
-    //             whole.push(b3);
-    //             whole.push(b4);
-    //             whole.append(buf);
-    //         }
-    //         js_sys::Uint8Array::from(whole.as_slice())
-    //     })
-    //     .map_err(|e| {
-    //         console_log!("image error {}", e);
-    //         return JsValue::null();
-    //     });
-    // return hh;
-    // let kk = hdr.map(|pixels| gen_irradiance_diffuse_map(pixels, w,hdr))
-    // match hdr {
-    //     Ok(x) => {
-    //         console_log!("image len {}", x.len());
-    //     }
-    //     Err(e) => {
-    //         console_log!("error {}", e)
-    //     }
-    // }
 }

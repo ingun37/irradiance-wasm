@@ -81,7 +81,7 @@ export function generatePreFilteredSpecularMap() {
   fetchSampleHDR().then((ab) => {
     wasm.specular(
       1000,
-      64,
+      128,
       ab,
       (idx: bigint, offset: number, size: bigint) => {
         const hdrBuf = new Uint8Array(
@@ -96,7 +96,7 @@ export function generatePreFilteredSpecularMap() {
           2000 * (Number(idx) + 1)
         );
       },
-      0.1
+      6
     );
   });
 }

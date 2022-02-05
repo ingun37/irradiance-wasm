@@ -241,21 +241,22 @@ pub fn gen_specular_map(
     env_width: usize,
     env_height: usize,
     map_size: usize,
-    roughness: f32,
     sample_size: usize,
-) -> Result<Vec<Vec<u8>>, std::io::Error> {
-    return make_6_rotations()
-        .iter()
-        .map(|r| {
+    mip_levels: u32,
+) -> Result<Vec<Vec<Vec<u8>>>, std::io::Error> {
+    return (0..mip_levels).map(|mip| {
+        let mip_map_size = (0..mip).fold(map_size, |x, _| x / 2);
+        let mip_roughness = (mip as f32) / ((mip_levels as f32) + 1f32);
+        make_6_rotations().iter().map(|r| {
             gen_specular_map_side(
                 env,
                 env_width,
                 env_height,
-                map_size,
+                mip_map_size,
                 r,
-                roughness,
+                mip_roughness,
                 sample_size,
             )
-        })
-        .collect();
+        }).collect()
+    }).collect();
 }

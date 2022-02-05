@@ -163,7 +163,7 @@ pub fn specular(
     map_size: usize,
     env_map_buffer: &[u8],
     callback: &js_sys::Function,
-    roughness: f32,
+    mip_levels: u32,
 ) -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
     let maps = read_hdr(env_map_buffer).and_then(|(pxls, w, h)| {
@@ -172,25 +172,30 @@ pub fn specular(
             w as usize,
             h as usize,
             map_size,
-            roughness,
             sample_count,
+            mip_levels,
         )
         .map_err(ImageError::from)
     });
-
-    return maps.map_err(map_err_to_jsvalue).and_then(|maps| {
-        (0..maps.len())
-            .map(|i| {
-                let map = &maps[i];
-                let ptr = map.as_ptr();
-                let bytelen = map.len();
-                let idx_js = JsValue::from(i);
-                let ptr_js = JsValue::from(ptr as u32);
-                let bytelen_js = JsValue::from(bytelen);
-                callback
-                    .call3(&JsValue::null(), &idx_js, &ptr_js, &bytelen_js)
-                    .map(|_| ())
+    let mut idx = -1;
+    return maps.map_err(map_err_to_jsvalue).and_then(|mipmaps| {
+        mipmaps
+            .iter()
+            .map(|maps| {
+                maps.iter()
+                    .map(|map| {
+                        idx += 1;
+                        let ptr = map.as_ptr();
+                        let bytelen = map.len();
+                        let idx_js = JsValue::from(idx);
+                        let ptr_js = JsValue::from(ptr as u32);
+                        let bytelen_js = JsValue::from(bytelen);
+                        callback
+                            .call3(&JsValue::null(), &idx_js, &ptr_js, &bytelen_js)
+                            .map(|_| ())
+                    })
+                    .collect::<Result<(), _>>()
             })
-            .collect::<Result<(), _>>()
+            .collect()
     });
 }

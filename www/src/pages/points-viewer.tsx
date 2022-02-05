@@ -60,7 +60,7 @@ const PointsViewer = (props: {
     const points = new Points(geometry, material);
     scene.add(points);
     scene.add(makeIndicator());
-    camera.position.z = 5;
+    camera.position.z = 2.5;
     requestAnimationFrame(() => renderer.render(scene, camera));
   }, []);
 

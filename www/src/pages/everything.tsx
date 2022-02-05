@@ -5,6 +5,8 @@ import { styled } from "@mui/material/styles";
 import Paper from "@mui/material/Paper";
 import PointsViewer from "./points-viewer";
 import * as wasm from "../../../pkg";
+import { roughness } from "../consts";
+import { Typography } from "@mui/material";
 const Item = styled(Paper)(({ theme }) => ({
   ...theme.typography.body2,
   padding: theme.spacing(1),
@@ -32,22 +34,27 @@ const Everything = () => {
 
       <Stack direction="row" spacing={2}>
         <Item>
+          <Typography>GGXS</Typography>
           <PointsViewer
-            buffer={() => wasm.ggxs(1, 1, 1, 0.2, 60)}
+            buffer={() => wasm.ggxs(1, 1, 1, roughness, 60)}
             itemSize={3}
             uniqueId="ggxs"
           />
         </Item>
         <Item>
+          <Typography>thestep</Typography>
+
           <PointsViewer
-            buffer={() => wasm.the_step(1, 1, 1, 0.2, 60)}
+            buffer={() => wasm.the_step(1, 1, 1, roughness, 60)}
             itemSize={3}
             uniqueId="thestep"
           />
         </Item>
         <Item>
+          <Typography>thestep2</Typography>
+
           <PointsViewer
-            buffer={() => wasm.the_step_2(1, 1, 1, 0.2, 60)}
+            buffer={() => wasm.the_step_2(1, 1, 1, roughness, 60)}
             itemSize={3}
             uniqueId="thestep2"
           />

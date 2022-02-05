@@ -1,7 +1,7 @@
 mod math;
 mod utils;
-use image::hdr::HDRDecoder;
-use image::ImageError;
+use image::hdr::{HDRDecoder, RGBE8Pixel};
+use image::{ImageError, ImageResult};
 use js_sys;
 use nalgebra::Vector3;
 use std::io::BufReader;
@@ -111,6 +111,17 @@ pub fn the_step_2(
     return js_sys::Float32Array::from(fs.as_slice());
 }
 
+fn read_hdr(env_map_buffer: &[u8]) -> ImageResult<(Vec<RGBE8Pixel>, u32, u32)> {
+    let buf_reader = BufReader::new(env_map_buffer);
+    let decoder = HDRDecoder::new(buf_reader);
+
+    return decoder.and_then(|x| {
+        let meta = x.metadata();
+        x.read_image_native()
+            .map(|pxls| (pxls, meta.width, meta.height))
+    });
+}
+
 #[wasm_bindgen]
 pub fn irradiance(
     // hdr_bytes:js_sys::Uint8Array
@@ -168,29 +179,22 @@ pub fn specular(
     env_map_buffer: &[u8],
     callback: &js_sys::Function,
     roughness: f32,
-) -> Result<(), JsValue>
-{
+) -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
     let buf_reader = BufReader::new(env_map_buffer);
     let decoder = HDRDecoder::new(buf_reader);
 
-    let maps = decoder
-        .and_then(|x| {
-            let meta = x.metadata();
-            x.read_image_native()
-                .map(|pxls| (pxls, meta.width, meta.height))
-        })
-        .and_then(|(pxls, w, h)| {
-            math::gen_specular_map(
-                &pxls,
-                w as usize,
-                h as usize,
-                map_size,
-                roughness,
-                sample_count,
-            )
-            .map_err(ImageError::from)
-        });
+    let maps = read_hdr(env_map_buffer).and_then(|(pxls, w, h)| {
+        math::gen_specular_map(
+            &pxls,
+            w as usize,
+            h as usize,
+            map_size,
+            roughness,
+            sample_count,
+        )
+        .map_err(ImageError::from)
+    });
 
     return maps.map_err(map_err_to_jsvalue).and_then(|maps| {
         (0..maps.len())
@@ -201,7 +205,9 @@ pub fn specular(
                 let idx_js = JsValue::from(i);
                 let ptr_js = JsValue::from(ptr as u32);
                 let bytelen_js = JsValue::from(bytelen);
-                callback.call3(&JsValue::null(), &idx_js, &ptr_js, &bytelen_js).map(|_| ())
+                callback
+                    .call3(&JsValue::null(), &idx_js, &ptr_js, &bytelen_js)
+                    .map(|_| ())
             })
             .collect::<Result<(), _>>()
     });

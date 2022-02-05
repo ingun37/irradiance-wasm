@@ -38,24 +38,24 @@ pub fn sample_equirect(
 }
 static UP: Vector3<f32> = Vector3::new(0f32, 1f32, 0f32);
 fn gen_side(
-    read: &Vec<RGBE8Pixel>,
-    width: usize,
-    height: usize,
-    env_map_size: usize,
+    env: &Vec<RGBE8Pixel>,
+    env_width: usize,
+    env_height: usize,
+    map_size: usize,
     side_rot: &Rotation3<f32>,
     hemi: &Vec<(Vector3<f32>, f32)>,
 ) -> Result<Vec<u8>, std::io::Error> {
     let mut buf: Vec<u8> = Vec::new();
     let encoder = HDREncoder::new(&mut buf);
     let mut pixels: Vec<Rgb<f32>> = Vec::new();
-    let env_map_size_half = env_map_size as f32 / 2f32;
+    let map_size_half = map_size as f32 / 2f32;
     // encoder.encode(data: &[Rgb<f32>], width: usize, height: usize)
-    for i in 0..env_map_size {
-        for j in 0..env_map_size {
+    for i in 0..map_size {
+        for j in 0..map_size {
             let _dir = Vector3::new(
-                j as f32 - env_map_size_half,
-                env_map_size_half,
-                i as f32 - env_map_size_half,
+                j as f32 - map_size_half,
+                map_size_half,
+                i as f32 - map_size_half,
             );
             let dir = side_rot * _dir;
             let mut rot_try = Rotation3::rotation_between(&UP, &dir);
@@ -65,7 +65,7 @@ fn gen_side(
             let hemi_len_f = hemi.len() as f32;
             for (_v, w) in hemi {
                 let v = (*rot) * _v;
-                let sample = sample_equirect(read, width, height, v.x, v.y, v.z);
+                let sample = sample_equirect(env, env_width, env_height, v.x, v.y, v.z);
                 let rgb = sample.to_hdr();
                 sum += Vector3::new(rgb[0], rgb[1], rgb[2]) * (*w) / hemi_len_f;
             }
@@ -78,15 +78,15 @@ fn gen_side(
     }
     // return Ok(buf);
     return encoder
-        .encode(pixels.as_slice(), env_map_size, env_map_size)
+        .encode(pixels.as_slice(), map_size, map_size)
         .map(|_| buf);
 }
 pub fn gen_irradiance_diffuse_map(
-    read: &Vec<RGBE8Pixel>,
-    width: usize,
-    height: usize,
+    env: &Vec<RGBE8Pixel>,
+    env_width: usize,
+    env_height: usize,
     sample_size: u32,
-    env_map_size: usize,
+    map_size: usize,
 ) -> Result<Vec<Vec<u8>>, std::io::Error> {
     let hemi = fibonacci_hemi_sphere(sample_size);
     let rotations: [Rotation3<f32>; 6] = {
@@ -107,7 +107,7 @@ pub fn gen_irradiance_diffuse_map(
 
     let sides = rotations
         .iter()
-        .map(|r| gen_side(read, width, height, env_map_size, r, &hemi));
+        .map(|r| gen_side(env, env_width, env_height, map_size, r, &hemi));
     return sides.collect();
 }
 fn radical_inverse_vdc(mut bits: u32) -> f32 {
@@ -199,7 +199,7 @@ fn gen_specular_map_side(
     map_size: usize,
     side_rot: &Rotation3<f32>,
     roughness: f32,
-    sample_count: usize,
+    sample_size: usize,
 ) -> Result<Vec<u8>, std::io::Error> {
     let mut buf: Vec<u8> = Vec::new();
     let encoder = HDREncoder::new(&mut buf);
@@ -223,7 +223,7 @@ fn gen_specular_map_side(
                 sample_dir.y,
                 sample_dir.z,
                 roughness,
-                sample_count,
+                sample_size,
             );
 
             pixels.push(image::Rgb {
@@ -256,7 +256,7 @@ pub fn gen_specular_map(
     env_height: usize,
     map_size: usize,
     roughness: f32,
-    sample_count: usize,
+    sample_size: usize,
 ) -> Result<Vec<Vec<u8>>, std::io::Error> {
     return make_6_rotations()
         .iter()
@@ -268,7 +268,7 @@ pub fn gen_specular_map(
                 map_size,
                 r,
                 roughness,
-                sample_count,
+                sample_size,
             )
         })
         .collect();

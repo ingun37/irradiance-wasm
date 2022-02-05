@@ -22,18 +22,27 @@ const Everything = () => {
     <div>
       <DiffuseIrradiance />
       <PreFilteredSpecular />
-      {/*<FibonacciSphere />*/}
-      <PointsViewer
-        buffer={() => wasm.fibonacci_hemi_sphere(300)}
-        itemSize={3}
-        uniqueId="fibo"
-      />
-      <PointsViewer
-        buffer={() => wasm.hammersleys(300)}
-        itemSize={2}
-        uniqueId="hammersly"
-      />
 
+      <Stack direction="row" spacing={2}>
+        <Item>
+          <Typography>Fibonacci Sphere</Typography>
+
+          <PointsViewer
+            buffer={() => wasm.fibonacci_hemi_sphere(300)}
+            itemSize={3}
+            uniqueId="fibo"
+          />
+        </Item>
+        <Item>
+          <Typography>Hammersley Sequence</Typography>
+
+          <PointsViewer
+            buffer={() => wasm.hammersleys(300)}
+            itemSize={2}
+            uniqueId="hammersly"
+          />
+        </Item>
+      </Stack>
       <Stack direction="row" spacing={2}>
         <Item>
           <Typography>GGXS</Typography>

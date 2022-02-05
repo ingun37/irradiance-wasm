@@ -4,6 +4,7 @@ import * as wasm_bg from "../../../pkg/irradiance_wasm_bg.wasm";
 import { useEffect, useState } from "react";
 import { interval, Subject, zip } from "rxjs";
 import { downloadBlob } from "../util";
+import { Button } from "@mui/material";
 const DiffuseIrradiance = () => {
   const [rx] = useState(new Subject<Uint8Array>());
   const onclick = () => {
@@ -35,6 +36,6 @@ const DiffuseIrradiance = () => {
       },
     });
   }, []);
-  return <button onClick={onclick}>click me</button>;
+  return <Button onClick={onclick}>Generate Irradiance Diffuse maps</Button>;
 };
 export default DiffuseIrradiance;

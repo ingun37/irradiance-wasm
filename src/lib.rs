@@ -52,7 +52,7 @@ pub fn fibonacci_hemi_sphere(sample_size: u32) -> js_sys::Float32Array {
     let rust_array = math::fibonacci_hemi_sphere(sample_size);
     let fs: Vec<f32> = rust_array
         .iter()
-        .map(|(v, w)| vec![v.x, v.y, v.z, *w])
+        .map(|(v, w)| vec![v.x*w, v.y*w, v.z*w])
         .flatten()
         .collect();
     return js_sys::Float32Array::from(fs.as_slice());
@@ -101,12 +101,13 @@ pub fn the_step_2(
     sample_size: u32,
 ) -> js_sys::Float32Array {
     let n = Vector3::new(nx, ny, nz).normalize();
-    let fs:Vec<f32> = (0..sample_size)
+    let fs: Vec<f32> = (0..sample_size)
         .map(|i| math::hammersley(i, sample_size))
         .map(|xi| math::importance_sample_ggx(xi, n, roughness))
         .map(|h| math::the_step(&n, &h))
         .flat_map(|l| math::the_step_2(&n, &l))
-        .flat_map(|(v,w)| vec![v.x/w, v.y/w, v.z/w]).collect();
+        .flat_map(|(v, w)| vec![v.x * w, v.y * w, v.z * w])
+        .collect();
     return js_sys::Float32Array::from(fs.as_slice());
 }
 

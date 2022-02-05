@@ -1,6 +1,5 @@
 import * as React from "react";
 import { useEffect } from "react";
-import * as wasm from "irradiance-wasm";
 
 import {
   BufferGeometry,
@@ -8,6 +7,7 @@ import {
   Points,
   PointsMaterial,
   Scene,
+  Vector2,
   Vector3,
   WebGLRenderer,
 } from "three";
@@ -16,7 +16,12 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { range } from "fp-ts/NonEmptyArray";
 import { makeIndicator } from "../util";
 
-const ImportanceSampleVectors = () => {
+const PointsViewer = (props: {
+  buffer: () => Float32Array;
+  itemSize: number;
+  uniqueId: string;
+}) => {
+  const uniqueId = "pointsviewer" + props.uniqueId;
   useEffect(() => {
     const scene = new Scene();
     const camera = new PerspectiveCamera(
@@ -27,16 +32,29 @@ const ImportanceSampleVectors = () => {
     );
     const renderer = new WebGLRenderer();
     renderer.setSize(consts.weight, consts.height);
-    document.getElementById(consts.threeDivId).appendChild(renderer.domElement);
+    document.getElementById(uniqueId).appendChild(renderer.domElement);
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.addEventListener("change", () => renderer.render(scene, camera));
     const geometry = new BufferGeometry();
-    const arr = wasm.ggxs(1, 1, 1, 1, 60);
-
-    const weightedPoints = range(0, arr.length / 3 - 1).map(
-      (i) => new Vector3(arr[i * 3], arr[i * 3 + 1], arr[i * 3 + 2])
-    );
-    geometry.setFromPoints(weightedPoints);
+    const arr = props.buffer();
+    const itemSize = props.itemSize;
+    const pointsMaker = () => {
+      if (itemSize === 2)
+        return range(0, arr.length / itemSize - 1).map(
+          (i) => new Vector2(arr[i * itemSize], arr[i * itemSize + 1])
+        );
+      else if (itemSize === 3)
+        return range(0, arr.length / itemSize - 1).map(
+          (i) =>
+            new Vector3(
+              arr[i * itemSize],
+              arr[i * itemSize + 1],
+              arr[i * itemSize + 2]
+            )
+        );
+      else throw new Error("unsupported item size: " + itemSize.toString());
+    };
+    geometry.setFromPoints(pointsMaker());
     // geometry.setAttribute("position", new Float32BufferAttribute(arr, 4));
     const material = new PointsMaterial({ color: 0xffff00, size: 0.04 });
     const points = new Points(geometry, material);
@@ -47,15 +65,13 @@ const ImportanceSampleVectors = () => {
   }, []);
 
   return (
-    <div>
-      <div
-        id={consts.threeDivId}
-        style={{
-          height: consts.height.toString() + "px",
-          width: consts.weight.toString() + "px",
-        }}
-      />
-    </div>
+    <div
+      id={uniqueId}
+      style={{
+        height: consts.height.toString() + "px",
+        width: consts.weight.toString() + "px",
+      }}
+    />
   );
 };
-export default ImportanceSampleVectors;
+export default PointsViewer;

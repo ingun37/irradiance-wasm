@@ -77,11 +77,15 @@ export function generateDiffuseIrradianceMap() {
   });
 }
 
-export function generatePreFilteredSpecularMap() {
+export function generatePreFilteredSpecularMap(
+  sampleCount: number,
+  mapSize: number,
+  mipLevels: number
+) {
   fetchSampleHDR().then((ab) => {
     wasm.specular(
-      1000,
-      128,
+      sampleCount,
+      mapSize,
       ab,
       (idx: bigint, offset: number, size: bigint) => {
         const hdrBuf = new Uint8Array(
@@ -96,7 +100,7 @@ export function generatePreFilteredSpecularMap() {
           2000 * (Number(idx) + 1)
         );
       },
-      6
+      mipLevels
     );
   });
 }

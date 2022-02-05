@@ -122,54 +122,39 @@ fn read_hdr(env_map_buffer: &[u8]) -> ImageResult<(Vec<RGBE8Pixel>, u32, u32)> {
     });
 }
 
+fn map_err_to_jsvalue(e: ImageError) -> JsValue {
+    JsValue::from("image error")
+}
+
 #[wasm_bindgen]
 pub fn irradiance(
-    // hdr_bytes:js_sys::Uint8Array
     sample_size: u32,
-    env_map_size: usize,
-    buffer: &[u8],
+    map_size: usize,
+    env_map_buffer: &[u8],
     callback: &js_sys::Function,
-)
-// -> Result<js_sys::Uint8Array, JsValue>
-{
+) -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
-    let buf_reader = BufReader::new(buffer);
-    let decoder = HDRDecoder::new(buf_reader);
 
-    let irradiance_diffuse_maps = decoder.and_then(|x| {
-        let meta = x.metadata();
-        return x.read_image_native().and_then(|pxls| {
-            math::gen_irradiance_diffuse_map(
-                &pxls,
-                meta.width as usize,
-                meta.height as usize,
-                sample_size,
-                env_map_size,
-            )
+    let maps = read_hdr(env_map_buffer).and_then(|(pxls, w, h)| {
+        math::gen_irradiance_diffuse_map(&pxls, w as usize, h as usize, sample_size, map_size)
             .map_err(ImageError::from)
-        });
     });
 
-    match irradiance_diffuse_maps {
-        Ok(maps) => {
-            for i in 0..maps.len() {
+    return maps.map_err(map_err_to_jsvalue).and_then(|maps| {
+        (0..maps.len())
+            .map(|i| {
                 let map = &maps[i];
                 let ptr = map.as_ptr();
                 let bytelen = map.len();
                 let idx_js = JsValue::from(i);
                 let ptr_js = JsValue::from(ptr as u32);
                 let bytelen_js = JsValue::from(bytelen);
-                callback.call3(&JsValue::null(), &idx_js, &ptr_js, &bytelen_js);
-            }
-        }
-        Err(e) => {
-            console_log!("{}", e);
-        }
-    }
-}
-
-fn map_err_to_jsvalue(e: ImageError) -> JsValue {
-    JsValue::from("image error")
+                callback
+                    .call3(&JsValue::null(), &idx_js, &ptr_js, &bytelen_js)
+                    .map(|_| ())
+            })
+            .collect::<Result<(), _>>()
+    });
 }
 
 #[wasm_bindgen]
@@ -181,9 +166,6 @@ pub fn specular(
     roughness: f32,
 ) -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
-    let buf_reader = BufReader::new(env_map_buffer);
-    let decoder = HDRDecoder::new(buf_reader);
-
     let maps = read_hdr(env_map_buffer).and_then(|(pxls, w, h)| {
         math::gen_specular_map(
             &pxls,

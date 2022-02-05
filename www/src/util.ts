@@ -1,5 +1,7 @@
-import { ArrowHelper, Group, Object3D, Vector3 } from "three";
+import { ArrowHelper, Object3D, Vector3 } from "three";
 import { zip } from "fp-ts/Array";
+import * as wasm from "../../pkg";
+import * as wasm_bg from "../../pkg/irradiance_wasm_bg.wasm";
 
 export function downloadURL(data, fileName) {
   const a = document.createElement("a");
@@ -44,4 +46,57 @@ export function makeIndicator() {
   group.add(...arrows);
 
   return group;
+}
+
+export function fetchSampleHDR() {
+  return fetch("./venetian_crossroads_1k.hdr")
+    .then((x) => x.arrayBuffer())
+    .then((x) => new Uint8Array(x));
+}
+
+export function generateDiffuseIrradianceMap() {
+  fetchSampleHDR().then((ab) => {
+    wasm.irradiance(
+      1000,
+      64,
+      ab,
+      (idx: bigint, offset: number, size: bigint) => {
+        const hdrBuf = new Uint8Array(
+          wasm_bg.memory.buffer,
+          offset,
+          Number(size)
+        );
+        const cp = new Uint8Array(new ArrayBuffer(Number(size)));
+        cp.set(hdrBuf);
+        setTimeout(
+          () => downloadBlob(cp, idx.toString() + ".hdr"),
+          2000 * (Number(idx) + 1)
+        );
+      }
+    );
+  });
+}
+
+export function generatePreFilteredSpecularMap() {
+  fetchSampleHDR().then((ab) => {
+    wasm.specular(
+      1000,
+      64,
+      ab,
+      (idx: bigint, offset: number, size: bigint) => {
+        const hdrBuf = new Uint8Array(
+          wasm_bg.memory.buffer,
+          offset,
+          Number(size)
+        );
+        const cp = new Uint8Array(new ArrayBuffer(Number(size)));
+        cp.set(hdrBuf);
+        setTimeout(
+          () => downloadBlob(cp, idx.toString() + ".hdr"),
+          2000 * (Number(idx) + 1)
+        );
+      },
+      0.1
+    );
+  });
 }

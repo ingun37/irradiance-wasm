@@ -3,6 +3,21 @@ use image::Rgb;
 use nalgebra::{Rotation3, Vector2, Vector3};
 use std::f32::consts::PI;
 
+pub fn make_6_rotations() -> [Rotation3<f32>; 6] {
+    let q = PI / 2f32;
+    // PY,  PZ,  NX,    NZ,   PX,        NY,
+    let xq = Rotation3::from_euler_angles(q, 0f32, 0f32);
+    let yq = Rotation3::from_euler_angles(0f32, q, 0f32);
+    return [
+        Rotation3::from_euler_angles(0f32, 0f32, 0f32),
+        xq,
+        yq * xq,
+        yq * yq * xq,
+        yq * yq * yq * xq,
+        xq * xq,
+    ];
+}
+
 pub fn fibonacci_hemi_sphere(sample_size: u32) -> Vec<(Vector3<f32>, f32)> {
     let phi = PI * ((3f32) - (5f32).sqrt());
     let mut points: Vec<(Vector3<f32>, f32)> = Vec::with_capacity((sample_size as usize) * 4);
@@ -89,22 +104,7 @@ pub fn gen_irradiance_diffuse_map(
     map_size: usize,
 ) -> Result<Vec<Vec<u8>>, std::io::Error> {
     let hemi = fibonacci_hemi_sphere(sample_size);
-    let rotations: [Rotation3<f32>; 6] = {
-        let q = PI / 2f32;
-        // PY,  PZ,  NX,    NZ,   PX,        NY,
-        let xq = Rotation3::from_euler_angles(q, 0f32, 0f32);
-        let yq = Rotation3::from_euler_angles(0f32, q, 0f32);
-        let rotations: [Rotation3<f32>; 6] = [
-            Rotation3::from_euler_angles(0f32, 0f32, 0f32),
-            xq,
-            yq * xq,
-            yq * yq * xq,
-            yq * yq * yq * xq,
-            xq * xq,
-        ];
-        rotations
-    };
-
+    let rotations = make_6_rotations();
     let sides = rotations
         .iter()
         .map(|r| gen_side(env, env_width, env_height, map_size, r, &hemi));
@@ -234,20 +234,6 @@ fn gen_specular_map_side(
     return encoder
         .encode(pixels.as_slice(), map_size, map_size)
         .map(|_| buf);
-}
-pub fn make_6_rotations() -> [Rotation3<f32>; 6] {
-    let q = PI / 2f32;
-    // PY,  PZ,  NX,    NZ,   PX,        NY,
-    let xq = Rotation3::from_euler_angles(q, 0f32, 0f32);
-    let yq = Rotation3::from_euler_angles(0f32, q, 0f32);
-    return [
-        Rotation3::from_euler_angles(0f32, 0f32, 0f32),
-        xq,
-        yq * xq,
-        yq * yq * xq,
-        yq * yq * yq * xq,
-        xq * xq,
-    ];
 }
 
 pub fn gen_specular_map(

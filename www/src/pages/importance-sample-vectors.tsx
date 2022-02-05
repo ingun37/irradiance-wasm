@@ -8,7 +8,6 @@ import {
   Points,
   PointsMaterial,
   Scene,
-  Vector2,
   Vector3,
   WebGLRenderer,
 } from "three";
@@ -32,14 +31,14 @@ const ImportanceSampleVectors = () => {
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.addEventListener("change", () => renderer.render(scene, camera));
     const geometry = new BufferGeometry();
-    const arr = wasm.importance_sample_vectors(0, 1, 0, 1, 30);
+    const arr = wasm.ggxs(1, 1, 1, 1, 60);
 
     const weightedPoints = range(0, arr.length / 3 - 1).map(
       (i) => new Vector3(arr[i * 3], arr[i * 3 + 1], arr[i * 3 + 2])
     );
     geometry.setFromPoints(weightedPoints);
     // geometry.setAttribute("position", new Float32BufferAttribute(arr, 4));
-    const material = new PointsMaterial({ color: 0xffff00, size: 0.02 });
+    const material = new PointsMaterial({ color: 0xffff00, size: 0.04 });
     const points = new Points(geometry, material);
     scene.add(points);
     scene.add(makeIndicator());

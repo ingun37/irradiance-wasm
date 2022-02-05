@@ -3,6 +3,7 @@ import DiffuseIrradiance from "./diffuse-irradiance";
 import Hammersley from "./hammersley";
 import FibonacciSphere from "./fibonacci-sphere";
 import ImportanceSampleVectors from "./importance-sample-vectors";
+import TheStep from "./the-step";
 
 // styles
 const pageStyles = {
@@ -150,6 +151,7 @@ const IndexPage = () => {
       <FibonacciSphere />
       <Hammersley />
       <ImportanceSampleVectors />
+      <TheStep />
     </main>
   );
 };

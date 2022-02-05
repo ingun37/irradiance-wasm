@@ -119,7 +119,7 @@ fn radical_inverse_vdc(mut bits: u32) -> f32 {
     return (bits as f32) * 2.3283064365386963e-10; // / 0x100000000
 }
 
-fn hammersley(i: u32, n: u32) -> Vector2<f32> {
+pub fn hammersley(i: u32, n: u32) -> Vector2<f32> {
     return Vector2::new((i as f32) / (n as f32), radical_inverse_vdc(i));
 }
 
@@ -127,16 +127,7 @@ fn vec3(x: f32, y: f32, z: f32) -> Vector3<f32> {
     Vector3::new(x, y, z)
 }
 
-pub fn low_discrepancy_sample_vectors(sample_size:usize) -> Vec<Vector2<f32>> {
-    let mut buf:Vec<Vector2<f32>> = Vec::with_capacity(sample_size);
-    for i in 0..sample_size {
-        let xi = hammersley(i as u32, sample_size as u32);
-        buf.push(xi);
-    }
-    return buf;
-}
-
-fn importance_sample_ggx(xi: Vector2<f32>, n: Vector3<f32>, roughness: f32) -> Vector3<f32> {
+pub fn importance_sample_ggx(xi: Vector2<f32>, n: Vector3<f32>, roughness: f32) -> Vector3<f32> {
     let a = roughness * roughness;
     let phi = 2f32 * PI * xi.x;
     let cosTheta = ((1.0 - xi.y) / (1.0 + (a * a - 1.0) * xi.y)).sqrt();
@@ -158,6 +149,10 @@ fn importance_sample_ggx(xi: Vector2<f32>, n: Vector3<f32>, roughness: f32) -> V
     return sample_vec.normalize();
 }
 
+pub fn the_step(v:&Vector3<f32>, h:&Vector3<f32>) -> Vector3<f32> {
+    return (2.0 * v.dot(&h) * h - v).normalize();
+}
+
 pub fn importance_sample_vectors(
     nx: f32,
     ny: f32,
@@ -165,12 +160,21 @@ pub fn importance_sample_vectors(
     roughness: f32,
     sample_size: usize,
 ) -> Vec<Vector3<f32>> {
+    let n = Vector3::new(nx, ny, nz).normalize();
+    let r = n;
+    let v = r;
     let mut buf: Vec<Vector3<f32>> = Vec::with_capacity(sample_size);
+    let mut total_weight = 0f32;
     for i in 0..sample_size {
         let xi = hammersley(i as u32, sample_size as u32);
-        let n = Vector3::new(nx, ny, nz).normalize();
         let h = importance_sample_ggx(xi, n, roughness);
-        buf.push(h);
+        let l = (2.0 * v.dot(&h) * h - v).normalize();
+        let n_dot_r = n.dot(&l);
+        if 0f32 < n_dot_r {
+            buf.push(l * n_dot_r);
+            total_weight += n_dot_r;
+        }
+        // buf.push(l);
     }
     return buf;
 }

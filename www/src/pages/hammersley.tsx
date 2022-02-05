@@ -31,7 +31,7 @@ const Hammersley = () => {
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.addEventListener("change", () => renderer.render(scene, camera));
     const geometry = new BufferGeometry();
-    const arr = wasm.low_discrepancy_sample_vectors(300);
+    const arr = wasm.hammersleys(300);
 
     const weightedPoints = range(0, arr.length / 2 - 1).map(
       (i) => new Vector2(arr[i * 2], arr[i * 2 + 1])

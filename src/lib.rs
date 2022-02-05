@@ -3,6 +3,7 @@ mod utils;
 use image::hdr::HDRDecoder;
 use image::ImageError;
 use js_sys;
+use nalgebra::Vector3;
 use std::io::BufReader;
 use wasm_bindgen::prelude::*;
 
@@ -58,30 +59,30 @@ pub fn fibonacci_hemi_sphere(sample_size: u32) -> js_sys::Float32Array {
 }
 
 #[wasm_bindgen]
-pub fn low_discrepancy_sample_vectors(sample_size: u32) -> js_sys::Float32Array {
-    let rust_array = math::low_discrepancy_sample_vectors(sample_size as usize);
-    let fs: Vec<f32> = rust_array
-        .iter()
-        .map(|v| vec![v.x, v.y])
-        .flatten()
-        .collect();
+pub fn hammersleys(sample_size: u32) -> js_sys::Float32Array {
+    let rust_array = (0..sample_size).map(|i| math::hammersley(i, sample_size));
+    let fs: Vec<f32> = rust_array.map(|v| vec![v.x, v.y]).flatten().collect();
     return js_sys::Float32Array::from(fs.as_slice());
 }
 
 #[wasm_bindgen]
-pub fn importance_sample_vectors(
-    nx: f32,
-    ny: f32,
-    nz: f32,
-    roughness: f32,
-    sample_size: u32,
-) -> js_sys::Float32Array {
-    let rust_array = math::importance_sample_vectors(nx, ny, nz, roughness, sample_size as usize);
-    let fs: Vec<f32> = rust_array
-        .iter()
-        .map(|v| vec![v.x, v.y, v.z])
-        .flatten()
-        .collect();
+pub fn ggxs(nx: f32, ny: f32, nz: f32, roughness: f32, sample_size: u32) -> js_sys::Float32Array {
+    let n = Vector3::new(nx, ny, nz).normalize();
+    let rust_array = (0..sample_size)
+        .map(|i| math::hammersley(i, sample_size))
+        .map(|xi| math::importance_sample_ggx(xi, n, roughness));
+    let fs: Vec<f32> = rust_array.map(|v| vec![v.x, v.y, v.z]).flatten().collect();
+    return js_sys::Float32Array::from(fs.as_slice());
+}
+
+#[wasm_bindgen]
+pub fn the_step(nx: f32, ny: f32, nz: f32, roughness: f32, sample_size: u32) -> js_sys::Float32Array {
+    let n = Vector3::new(nx, ny, nz).normalize();
+    let rust_array = (0..sample_size)
+        .map(|i| math::hammersley(i, sample_size))
+        .map(|xi| math::importance_sample_ggx(xi, n, roughness))
+        .map(|h| math:: the_step(&n, &h));
+    let fs: Vec<f32> = rust_array.map(|v| vec![v.x, v.y, v.z]).flatten().collect();
     return js_sys::Float32Array::from(fs.as_slice());
 }
 

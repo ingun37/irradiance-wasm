@@ -153,6 +153,18 @@ pub fn the_step(v:&Vector3<f32>, h:&Vector3<f32>) -> Vector3<f32> {
     return (2.0 * v.dot(&h) * h - v).normalize();
 }
 
+pub fn the_step_2(n:&Vector3<f32>, l:&Vector3<f32>) -> Option<(Vector3<f32>, f32)> {
+    let n_dot_l = n.dot(&l);
+    if 0f32 < n_dot_l {
+        return Some((*l, n_dot_l))
+        // buf.push(l * n_dot_r);
+        // total_weight += n_dot_r;
+    }
+    else {
+        return None
+    }
+}
+
 pub fn importance_sample_vectors(
     nx: f32,
     ny: f32,
@@ -168,11 +180,11 @@ pub fn importance_sample_vectors(
     for i in 0..sample_size {
         let xi = hammersley(i as u32, sample_size as u32);
         let h = importance_sample_ggx(xi, n, roughness);
-        let l = (2.0 * v.dot(&h) * h - v).normalize();
-        let n_dot_r = n.dot(&l);
-        if 0f32 < n_dot_r {
-            buf.push(l * n_dot_r);
-            total_weight += n_dot_r;
+        let l = the_step(&v,&h);
+        let n_dot_l = n.dot(&l);
+        if 0f32 < n_dot_l {
+            buf.push(l * n_dot_l);
+            total_weight += n_dot_l;
         }
         // buf.push(l);
     }

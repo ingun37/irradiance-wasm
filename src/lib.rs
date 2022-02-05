@@ -76,13 +76,37 @@ pub fn ggxs(nx: f32, ny: f32, nz: f32, roughness: f32, sample_size: u32) -> js_s
 }
 
 #[wasm_bindgen]
-pub fn the_step(nx: f32, ny: f32, nz: f32, roughness: f32, sample_size: u32) -> js_sys::Float32Array {
+pub fn the_step(
+    nx: f32,
+    ny: f32,
+    nz: f32,
+    roughness: f32,
+    sample_size: u32,
+) -> js_sys::Float32Array {
     let n = Vector3::new(nx, ny, nz).normalize();
     let rust_array = (0..sample_size)
         .map(|i| math::hammersley(i, sample_size))
         .map(|xi| math::importance_sample_ggx(xi, n, roughness))
-        .map(|h| math:: the_step(&n, &h));
+        .map(|h| math::the_step(&n, &h));
     let fs: Vec<f32> = rust_array.map(|v| vec![v.x, v.y, v.z]).flatten().collect();
+    return js_sys::Float32Array::from(fs.as_slice());
+}
+
+#[wasm_bindgen]
+pub fn the_step_2(
+    nx: f32,
+    ny: f32,
+    nz: f32,
+    roughness: f32,
+    sample_size: u32,
+) -> js_sys::Float32Array {
+    let n = Vector3::new(nx, ny, nz).normalize();
+    let fs:Vec<f32> = (0..sample_size)
+        .map(|i| math::hammersley(i, sample_size))
+        .map(|xi| math::importance_sample_ggx(xi, n, roughness))
+        .map(|h| math::the_step(&n, &h))
+        .flat_map(|l| math::the_step_2(&n, &l))
+        .flat_map(|(v,w)| vec![v.x/w, v.y/w, v.z/w]).collect();
     return js_sys::Float32Array::from(fs.as_slice());
 }
 

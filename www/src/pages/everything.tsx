@@ -7,6 +7,7 @@ import PointsViewer from "./points-viewer";
 import * as wasm from "../../../pkg";
 import { roughness } from "../consts";
 import { Typography } from "@mui/material";
+import PreFilteredSpecular from "./pre-filtered-specular";
 const Item = styled(Paper)(({ theme }) => ({
   ...theme.typography.body2,
   padding: theme.spacing(1),
@@ -20,6 +21,7 @@ const Everything = () => {
   return (
     <div>
       <DiffuseIrradiance />
+      <PreFilteredSpecular />
       {/*<FibonacciSphere />*/}
       <PointsViewer
         buffer={() => wasm.fibonacci_hemi_sphere(300)}

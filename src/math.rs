@@ -149,44 +149,127 @@ pub fn importance_sample_ggx(xi: Vector2<f32>, n: Vector3<f32>, roughness: f32) 
     return sample_vec.normalize();
 }
 
-pub fn the_step(v:&Vector3<f32>, h:&Vector3<f32>) -> Vector3<f32> {
+pub fn the_step(v: &Vector3<f32>, h: &Vector3<f32>) -> Vector3<f32> {
     return (2.0 * v.dot(&h) * h - v).normalize();
 }
 
-pub fn the_step_2(n:&Vector3<f32>, l:&Vector3<f32>) -> Option<(Vector3<f32>, f32)> {
+pub fn the_step_2(n: &Vector3<f32>, l: &Vector3<f32>) -> Option<(Vector3<f32>, f32)> {
     let n_dot_l = n.dot(&l);
     if 0f32 < n_dot_l {
-        return Some((*l, n_dot_l))
+        return Some((*l, n_dot_l));
         // buf.push(l * n_dot_r);
         // total_weight += n_dot_r;
-    }
-    else {
-        return None
+    } else {
+        return None;
     }
 }
-
-pub fn importance_sample_vectors(
+pub fn sample_specular(
+    envmap: &Vec<RGBE8Pixel>,
+    width: usize,
+    height: usize,
     nx: f32,
     ny: f32,
     nz: f32,
     roughness: f32,
     sample_size: usize,
-) -> Vec<Vector3<f32>> {
+) -> Vector3<f32> {
     let n = Vector3::new(nx, ny, nz).normalize();
-    let r = n;
-    let v = r;
-    let mut buf: Vec<Vector3<f32>> = Vec::with_capacity(sample_size);
     let mut total_weight = 0f32;
-    for i in 0..sample_size {
-        let xi = hammersley(i as u32, sample_size as u32);
-        let h = importance_sample_ggx(xi, n, roughness);
-        let l = the_step(&v,&h);
-        let n_dot_l = n.dot(&l);
-        if 0f32 < n_dot_l {
-            buf.push(l * n_dot_l);
-            total_weight += n_dot_l;
+    let fs: Vector3<f32> = (0..sample_size)
+        .map(|i| hammersley(i as u32, sample_size as u32))
+        .map(|xi| importance_sample_ggx(xi, n, roughness))
+        .map(|h| the_step(&n, &h))
+        .flat_map(|l| the_step_2(&n, &l))
+        .map(|(v, w)| {
+            let color = sample_equirect(envmap, width, height, v.x, v.y, v.z).to_hdr();
+            let x = color[0] * w;
+            let y = color[1] * w;
+            let z = color[2] * w;
+            total_weight += w;
+            Vector3::new(x, y, z)
+        })
+        .sum();
+    return fs / total_weight;
+}
+
+fn gen_specular_map_side(
+    env: &Vec<RGBE8Pixel>,
+    env_width: usize,
+    env_height: usize,
+    map_size: usize,
+    side_rot: &Rotation3<f32>,
+    roughness: f32,
+    sample_count: usize,
+) -> Result<Vec<u8>, std::io::Error> {
+    let mut buf: Vec<u8> = Vec::new();
+    let encoder = HDREncoder::new(&mut buf);
+    let mut pixels: Vec<Rgb<f32>> = Vec::new();
+    let env_map_size_half = map_size as f32 / 2f32;
+    // encoder.encode(data: &[Rgb<f32>], width: usize, height: usize)
+    for i in 0..map_size {
+        for j in 0..map_size {
+            let _sample_dir = Vector3::new(
+                j as f32 - env_map_size_half,
+                env_map_size_half,
+                i as f32 - env_map_size_half,
+            );
+            let sample_dir = side_rot * _sample_dir;
+
+            let c = sample_specular(
+                env,
+                env_width,
+                env_height,
+                sample_dir.x,
+                sample_dir.y,
+                sample_dir.z,
+                roughness,
+                sample_count,
+            );
+
+            pixels.push(image::Rgb {
+                data: [c.x, c.y, c.z],
+            });
         }
-        // buf.push(l);
     }
-    return buf;
+    return encoder
+        .encode(pixels.as_slice(), map_size, map_size)
+        .map(|_| buf);
+}
+pub fn make_6_rotations() -> [Rotation3<f32>; 6] {
+    let q = PI / 2f32;
+    // PY,  PZ,  NX,    NZ,   PX,        NY,
+    let xq = Rotation3::from_euler_angles(q, 0f32, 0f32);
+    let yq = Rotation3::from_euler_angles(0f32, q, 0f32);
+    return [
+        Rotation3::from_euler_angles(0f32, 0f32, 0f32),
+        xq,
+        yq * xq,
+        yq * yq * xq,
+        yq * yq * yq * xq,
+        xq * xq,
+    ];
+}
+
+pub fn gen_specular_map(
+    env: &Vec<RGBE8Pixel>,
+    env_width: usize,
+    env_height: usize,
+    map_size: usize,
+    roughness: f32,
+    sample_count: usize,
+) -> Result<Vec<Vec<u8>>, std::io::Error> {
+    return make_6_rotations()
+        .iter()
+        .map(|r| {
+            gen_specular_map_side(
+                env,
+                env_width,
+                env_height,
+                map_size,
+                r,
+                roughness,
+                sample_count,
+            )
+        })
+        .collect();
 }

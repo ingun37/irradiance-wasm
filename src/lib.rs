@@ -52,7 +52,7 @@ pub fn fibonacci_hemi_sphere(sample_size: u32) -> js_sys::Float32Array {
     let rust_array = math::fibonacci_hemi_sphere(sample_size);
     let fs: Vec<f32> = rust_array
         .iter()
-        .map(|(v, w)| vec![v.x*w, v.y*w, v.z*w])
+        .map(|(v, w)| vec![v.x * w, v.y * w, v.z * w])
         .flatten()
         .collect();
     return js_sys::Float32Array::from(fs.as_slice());
@@ -155,4 +155,54 @@ pub fn irradiance(
             console_log!("{}", e);
         }
     }
+}
+
+fn map_err_to_jsvalue(e: ImageError) -> JsValue {
+    JsValue::from("image error")
+}
+
+#[wasm_bindgen]
+pub fn specular(
+    sample_count: usize,
+    map_size: usize,
+    env_map_buffer: &[u8],
+    callback: &js_sys::Function,
+    roughness: f32,
+) -> Result<(), JsValue>
+{
+    console_error_panic_hook::set_once();
+    let buf_reader = BufReader::new(env_map_buffer);
+    let decoder = HDRDecoder::new(buf_reader);
+
+    let maps = decoder
+        .and_then(|x| {
+            let meta = x.metadata();
+            x.read_image_native()
+                .map(|pxls| (pxls, meta.width, meta.height))
+        })
+        .and_then(|(pxls, w, h)| {
+            math::gen_specular_map(
+                &pxls,
+                w as usize,
+                h as usize,
+                map_size,
+                roughness,
+                sample_count,
+            )
+            .map_err(ImageError::from)
+        });
+
+    return maps.map_err(map_err_to_jsvalue).and_then(|maps| {
+        (0..maps.len())
+            .map(|i| {
+                let map = &maps[i];
+                let ptr = map.as_ptr();
+                let bytelen = map.len();
+                let idx_js = JsValue::from(i);
+                let ptr_js = JsValue::from(ptr as u32);
+                let bytelen_js = JsValue::from(bytelen);
+                callback.call3(&JsValue::null(), &idx_js, &ptr_js, &bytelen_js).map(|_| ())
+            })
+            .collect::<Result<(), _>>()
+    });
 }

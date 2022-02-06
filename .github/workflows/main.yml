@@ -26,6 +26,9 @@ jobs:
         uses: jetli/wasm-pack-action@v0.3.0
       - name: build wasm
         run: ./build.sh
+      - name: install
+        run: npm install
+        working-directory: ./www/
       - name: deploy
         run: npm run deploy
         working-directory: ./www/

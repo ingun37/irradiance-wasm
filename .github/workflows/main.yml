@@ -26,14 +26,6 @@ jobs:
         uses: jetli/wasm-pack-action@v0.3.0
       - name: build wasm
         run: ./build.sh
-      - name: configure www
-        run: npm install
+      - name: deploy
+        run: npm run deploy
         working-directory: ./www/
-      - name: build www
-        run: npm run build
-        working-directory: ./www/
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./www/public

@@ -29,6 +29,8 @@ jobs:
       - name: install
         run: npm install
         working-directory: ./www/
+      - run: git config --global user.email "ingun37@gmail.com"
+      - run: git config --global user.name "Ingun Jon"
       - name: deploy
         run: npm run deploy
         working-directory: ./www/

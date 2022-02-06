@@ -29,8 +29,11 @@ jobs:
       - name: install
         run: npm install
         working-directory: ./www/
-      - run: git config --global user.email "ingun37@gmail.com"
-      - run: git config --global user.name "Ingun Jon"
-      - name: deploy
-        run: npm run deploy
+      - name: build
+        run: npm run build
         working-directory: ./www/
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./www/public

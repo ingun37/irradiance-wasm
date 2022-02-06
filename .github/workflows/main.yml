@@ -26,7 +26,11 @@ jobs:
         uses: jetli/wasm-pack-action@v0.3.0
       - name: build wasm
         run: ./build.sh
-      - uses: enriikke/gatsby-gh-pages-action@v2
+      - name: build www
+        run: npm run build
+        working-directory: ./www/
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          access-token: ${{ secrets.GITHUB_TOKEN }}
-          working-dir: ./www/
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./www/public

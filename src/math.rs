@@ -20,15 +20,18 @@ pub fn make_6_rotations() -> [Rotation3<f32>; 6] {
 
 pub fn fibonacci_hemi_sphere(sample_size: u32) -> Vec<(Vector3<f32>, f32)> {
     let phi = PI * ((3f32) - (5f32).sqrt());
-    let sample_size_f = sample_size as f32; 
-    return (0..sample_size).map(|i| i as f32).map(|i| {
-        let y = 1f32 - (i / (sample_size_f - 1f32)); // y goes from 1 to 0 (hemisphere)
-        let radius = (1f32 - y * y).sqrt(); //  # radius at y
-        let theta = phi * i; //  # golden angle increment
-        let x = theta.cos() * radius;
-        let z = theta.sin() * radius;
-        (Vector3::new(x, y, z), y.asin())
-    }).collect();
+    let sample_size_f = sample_size as f32;
+    return (0..sample_size)
+        .map(|i| i as f32)
+        .map(|i| {
+            let y = 1f32 - (i / (sample_size_f - 1f32)); // y goes from 1 to 0 (hemisphere)
+            let radius = (1f32 - y * y).sqrt(); //  # radius at y
+            let theta = phi * i; //  # golden angle increment
+            let x = theta.cos() * radius;
+            let z = theta.sin() * radius;
+            (Vector3::new(x, y, z), y.asin())
+        })
+        .collect();
 }
 
 pub fn sample_equirect(
@@ -60,31 +63,37 @@ fn gen_side(
     let mut buf: Vec<u8> = Vec::new();
     let encoder = HDREncoder::new(&mut buf);
     let map_size_half = map_size as f32 / 2f32;
-    let pixels = (0..map_size * map_size).map(|ij| {
-        let i = ij / map_size;
-        let j = ij % map_size;
-        let _dir = Vector3::new(
-            j as f32 - map_size_half,
-            map_size_half,
-            i as f32 - map_size_half,
-        );
-        let dir = side_rot * _dir;
-        let mut rot_try = Rotation3::rotation_between(&UP, &dir);
-        let rot = rot_try.get_or_insert(Rotation3::from_euler_angles(0f32, 0f32, PI));
-        let hemi_len_f = hemi.len() as f32;
+    let pixels = (0..map_size * map_size)
+        .map(|ij| {
+            let i = ij / map_size;
+            let j = ij % map_size;
+            let _dir = Vector3::new(
+                j as f32 - map_size_half,
+                map_size_half,
+                i as f32 - map_size_half,
+            );
+            let dir = side_rot * _dir;
+            let mut rot_try = Rotation3::rotation_between(&UP, &dir);
+            let rot = rot_try.get_or_insert(Rotation3::from_euler_angles(0f32, 0f32, PI));
+            let hemi_len_f = hemi.len() as f32;
 
-        // TODO: use wgpu
-        let sum = hemi.iter().map(|(_v,w)| {
-            let v = (*rot) * _v;
-            let sample = sample_equirect(env, env_width, env_height, v.x, v.y, v.z);
-            let rgb = sample.to_hdr();
-            Vector3::new(rgb[0], rgb[1], rgb[2]) * (*w) / hemi_len_f
-        }).sum::<Vector3<f32>>() * PI;
+            // TODO: use wgpu
+            let sum = hemi
+                .iter()
+                .map(|(_v, w)| {
+                    let v = (*rot) * _v;
+                    let sample = sample_equirect(env, env_width, env_height, v.x, v.y, v.z);
+                    let rgb = sample.to_hdr();
+                    Vector3::new(rgb[0], rgb[1], rgb[2]) * (*w) / hemi_len_f
+                })
+                .sum::<Vector3<f32>>()
+                * PI;
 
-        image::Rgb {
-            data: [sum.x, sum.y, sum.z],
-        }
-    }).collect::<Vec<Rgb<f32>>>();
+            image::Rgb {
+                data: [sum.x, sum.y, sum.z],
+            }
+        })
+        .collect::<Vec<Rgb<f32>>>();
     // return Ok(buf);
     return encoder
         .encode(pixels.as_slice(), map_size, map_size)
@@ -197,11 +206,11 @@ fn gen_specular_map_side(
 ) -> Result<Vec<u8>, std::io::Error> {
     let mut buf: Vec<u8> = Vec::new();
     let encoder = HDREncoder::new(&mut buf);
-    let mut pixels: Vec<Rgb<f32>> = Vec::new();
     let env_map_size_half = map_size as f32 / 2f32;
-    // encoder.encode(data: &[Rgb<f32>], width: usize, height: usize)
-    for i in 0..map_size {
-        for j in 0..map_size {
+    let pixels = (0..map_size * map_size)
+        .map(|ij| {
+            let i = ij / map_size;
+            let j = ij % map_size;
             let _sample_dir = Vector3::new(
                 j as f32 - env_map_size_half,
                 env_map_size_half,
@@ -219,12 +228,12 @@ fn gen_specular_map_side(
                 roughness,
                 sample_size,
             );
-
-            pixels.push(image::Rgb {
+            image::Rgb {
                 data: [c.x, c.y, c.z],
-            });
-        }
-    }
+            }
+        })
+        .collect::<Vec<Rgb<f32>>>();
+
     return encoder
         .encode(pixels.as_slice(), map_size, map_size)
         .map(|_| buf);

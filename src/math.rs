@@ -68,21 +68,24 @@ fn gen_side(
             let mut rot_try = Rotation3::rotation_between(&UP, &dir);
             let rot = rot_try.get_or_insert(Rotation3::from_euler_angles(0f32, 0f32, PI));
             // TODO: use wgpu
-            let sum = (0..sample_size)
+            let mut total_rgb = Rgb([0f32, 0f32, 0f32]);
+            (0..sample_size)
                 .map(|i| {
                     let (v, w) = fibonacci_hemi_sphere::nth(sample_size, i);
                     (((*rot) * v), w)
                 })
-                .map(|(v, w)| {
-                    let Rgb([r, g, b]) =
+                .for_each(|(v, w)| {
+                    let rgb =
                         sample_equirect(env, env_width, env_height, v.x, v.y, v.z).to_hdr();
-                    Vector3::new(r, g, b) * w
-                })
-                .sum::<Vector3<f32>>()
-                * PI
-                / sample_size as f32;
+                    for i in 0..3 {
+                        total_rgb[i] += rgb[i] * w;
+                    }
+                });
 
-            image::Rgb([sum.x, sum.y, sum.z])
+            for i in 0..3 {
+                total_rgb[i] = total_rgb[i] * PI / sample_size as f32;
+            }
+            total_rgb
         })
         .collect::<Vec<Rgb<f32>>>();
     // return Ok(buf);
@@ -170,7 +173,7 @@ pub fn sample_specular(
     let mut total_weight = 0f32;
     let mut total_rgb = Rgb([0f32, 0f32, 0f32]);
 
-    let fs = (0..sample_size)
+    (0..sample_size)
         .map(|i| hammersley(i as u32, sample_size as u32))
         .map(|xi| importance_sample_ggx(xi, n, roughness))
         .map(|h| the_step(&n, &h))

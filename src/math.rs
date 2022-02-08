@@ -1,9 +1,11 @@
 use image::codecs::hdr::{HdrEncoder, Rgbe8Pixel};
-use image::{Rgb, ImageError};
+use image::{ImageError, Rgb};
 use nalgebra::{Rotation3, Vector2, Vector3};
 use std::f32::consts::PI;
 pub mod fibonacci_hemi_sphere;
 mod rgb_ex;
+use rgb_ex::Rgbw;
+
 pub fn make_6_rotations() -> [Rotation3<f32>; 6] {
     let q = PI / 2f32;
     // PY,  PZ,  NX,    NZ,   PX,        NY,
@@ -66,8 +68,7 @@ fn gen_side(
             let mut rot_try = Rotation3::rotation_between(&UP, &dir);
             let rot = rot_try.get_or_insert(Rotation3::from_euler_angles(0f32, 0f32, PI));
             // TODO: use wgpu
-
-            let sum_ = (0..sample_size)
+            let sum = (0..sample_size)
                 .map(|i| {
                     let (v, w) = fibonacci_hemi_sphere::nth(sample_size, i);
                     (((*rot) * v), w)
@@ -76,18 +77,6 @@ fn gen_side(
                     let Rgb([r, g, b]) =
                         sample_equirect(env, env_width, env_height, v.x, v.y, v.z).to_hdr();
                     Vector3::new(r, g, b) * w
-                })
-                .sum::<Vector3<f32>>();
-
-            let sum = (0..sample_size)
-                .map(|i| {
-                    let (v, w) = fibonacci_hemi_sphere::nth(sample_size, i);
-                    (((*rot) * v), w)
-                })
-                .map(|(v, w)| {
-                    let sample = sample_equirect(env, env_width, env_height, v.x, v.y, v.z);
-                    let rgb = sample.to_hdr();
-                    Vector3::new(rgb[0], rgb[1], rgb[2]) * w
                 })
                 .sum::<Vector3<f32>>()
                 * PI
@@ -176,24 +165,28 @@ pub fn sample_specular(
     nz: f32,
     roughness: f32,
     sample_size: usize,
-) -> Vector3<f32> {
+) -> Rgb<f32> {
     let n = Vector3::new(nx, ny, nz).normalize();
     let mut total_weight = 0f32;
-    let fs: Vector3<f32> = (0..sample_size)
+    let mut total_rgb = Rgb([0f32, 0f32, 0f32]);
+
+    let fs = (0..sample_size)
         .map(|i| hammersley(i as u32, sample_size as u32))
         .map(|xi| importance_sample_ggx(xi, n, roughness))
         .map(|h| the_step(&n, &h))
         .flat_map(|l| the_step_2(&n, &l))
-        .map(|(v, w)| {
-            let color = sample_equirect(envmap, width, height, v.x, v.y, v.z).to_hdr();
-            let x = color[0] * w;
-            let y = color[1] * w;
-            let z = color[2] * w;
+        .for_each(|(v, w)| {
+            let rgb = sample_equirect(envmap, width, height, v.x, v.y, v.z).to_hdr();
+            for i in 0..3 {
+                total_rgb[i] += rgb[i] * w;
+            }
             total_weight += w;
-            Vector3::new(x, y, z)
-        })
-        .sum();
-    return fs / total_weight;
+        });
+
+    for i in 0..3 {
+        total_rgb[i] /= total_weight;
+    }
+    total_rgb
 }
 
 fn gen_specular_map_side(
@@ -210,7 +203,7 @@ fn gen_specular_map_side(
     let pixels = (0..map_size * map_size)
         .map(|ij| sample_vec(map_size, side_rot, ij))
         .map(|dir| {
-            let c = sample_specular(
+            sample_specular(
                 env,
                 env_width,
                 env_height,
@@ -219,8 +212,7 @@ fn gen_specular_map_side(
                 dir.z,
                 roughness,
                 sample_size,
-            );
-            image::Rgb([c.x, c.y, c.z])
+            )
         })
         .collect::<Vec<Rgb<f32>>>();
 

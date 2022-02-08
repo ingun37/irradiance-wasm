@@ -1,8 +1,9 @@
-use image::hdr::{HDREncoder, RGBE8Pixel};
-use image::Rgb;
+use image::codecs::hdr::{HdrEncoder, Rgbe8Pixel};
+use image::{Rgb, ImageError};
 use nalgebra::{Rotation3, Vector2, Vector3};
 use std::f32::consts::PI;
 pub mod fibonacci_hemi_sphere;
+mod rgb_ex;
 pub fn make_6_rotations() -> [Rotation3<f32>; 6] {
     let q = PI / 2f32;
     // PY,  PZ,  NX,    NZ,   PX,        NY,
@@ -32,13 +33,13 @@ fn sample_vec(map_size: usize, side_rot: &Rotation3<f32>, ij: usize) -> Vector3<
 }
 
 pub fn sample_equirect(
-    img: &Vec<RGBE8Pixel>,
+    img: &Vec<Rgbe8Pixel>,
     width: usize,
     height: usize,
     x: f32,
     y: f32,
     z: f32,
-) -> RGBE8Pixel {
+) -> Rgbe8Pixel {
     let tau = PI * 2f32;
     let polar = (x.atan2(z) + PI).rem_euclid(tau);
     let azimuth = Vector2::new(x, z).magnitude().atan2(y).rem_euclid(tau);
@@ -50,21 +51,34 @@ pub fn sample_equirect(
 }
 static UP: Vector3<f32> = Vector3::new(0f32, 1f32, 0f32);
 fn gen_side(
-    env: &Vec<RGBE8Pixel>,
+    env: &Vec<Rgbe8Pixel>,
     env_width: usize,
     env_height: usize,
     map_size: usize,
     side_rot: &Rotation3<f32>,
     sample_size: u32,
-) -> Result<Vec<u8>, std::io::Error> {
+) -> Result<Vec<u8>, ImageError> {
     let mut buf: Vec<u8> = Vec::new();
-    let encoder = HDREncoder::new(&mut buf);
+    let encoder = HdrEncoder::new(&mut buf);
     let pixels = (0..map_size * map_size)
         .map(|ij| sample_vec(map_size, side_rot, ij))
         .map(|dir| {
             let mut rot_try = Rotation3::rotation_between(&UP, &dir);
             let rot = rot_try.get_or_insert(Rotation3::from_euler_angles(0f32, 0f32, PI));
             // TODO: use wgpu
+
+            let sum_ = (0..sample_size)
+                .map(|i| {
+                    let (v, w) = fibonacci_hemi_sphere::nth(sample_size, i);
+                    (((*rot) * v), w)
+                })
+                .map(|(v, w)| {
+                    let Rgb([r, g, b]) =
+                        sample_equirect(env, env_width, env_height, v.x, v.y, v.z).to_hdr();
+                    Vector3::new(r, g, b) * w
+                })
+                .sum::<Vector3<f32>>();
+
             let sum = (0..sample_size)
                 .map(|i| {
                     let (v, w) = fibonacci_hemi_sphere::nth(sample_size, i);
@@ -79,9 +93,7 @@ fn gen_side(
                 * PI
                 / sample_size as f32;
 
-            image::Rgb {
-                data: [sum.x, sum.y, sum.z],
-            }
+            image::Rgb([sum.x, sum.y, sum.z])
         })
         .collect::<Vec<Rgb<f32>>>();
     // return Ok(buf);
@@ -90,12 +102,12 @@ fn gen_side(
         .map(|_| buf);
 }
 pub fn gen_irradiance_diffuse_map(
-    env: &Vec<RGBE8Pixel>,
+    env: &Vec<Rgbe8Pixel>,
     env_width: usize,
     env_height: usize,
     sample_size: u32,
     map_size: usize,
-) -> Result<Vec<Vec<u8>>, std::io::Error> {
+) -> Result<Vec<Vec<u8>>, ImageError> {
     let rotations = make_6_rotations();
     let sides = rotations
         .iter()
@@ -156,7 +168,7 @@ pub fn the_step_2(n: &Vector3<f32>, l: &Vector3<f32>) -> Option<(Vector3<f32>, f
     }
 }
 pub fn sample_specular(
-    envmap: &Vec<RGBE8Pixel>,
+    envmap: &Vec<Rgbe8Pixel>,
     width: usize,
     height: usize,
     nx: f32,
@@ -185,16 +197,16 @@ pub fn sample_specular(
 }
 
 fn gen_specular_map_side(
-    env: &Vec<RGBE8Pixel>,
+    env: &Vec<Rgbe8Pixel>,
     env_width: usize,
     env_height: usize,
     map_size: usize,
     side_rot: &Rotation3<f32>,
     roughness: f32,
     sample_size: usize,
-) -> Result<Vec<u8>, std::io::Error> {
+) -> Result<Vec<u8>, ImageError> {
     let mut buf: Vec<u8> = Vec::new();
-    let encoder = HDREncoder::new(&mut buf);
+    let encoder = HdrEncoder::new(&mut buf);
     let pixels = (0..map_size * map_size)
         .map(|ij| sample_vec(map_size, side_rot, ij))
         .map(|dir| {
@@ -208,9 +220,7 @@ fn gen_specular_map_side(
                 roughness,
                 sample_size,
             );
-            image::Rgb {
-                data: [c.x, c.y, c.z],
-            }
+            image::Rgb([c.x, c.y, c.z])
         })
         .collect::<Vec<Rgb<f32>>>();
 
@@ -220,13 +230,13 @@ fn gen_specular_map_side(
 }
 
 pub fn gen_specular_map(
-    env: &Vec<RGBE8Pixel>,
+    env: &Vec<Rgbe8Pixel>,
     env_width: usize,
     env_height: usize,
     map_size: usize,
     sample_size: usize,
     mip_levels: u32,
-) -> Result<Vec<Vec<Vec<u8>>>, std::io::Error> {
+) -> Result<Vec<Vec<Vec<u8>>>, ImageError> {
     return (0..mip_levels)
         .map(|mip| {
             let mip_map_size = (0..mip).fold(map_size, |x, _| x / 2);

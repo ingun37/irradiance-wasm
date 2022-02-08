@@ -1,6 +1,6 @@
 mod math;
 mod utils;
-use image::hdr::{HDRDecoder, RGBE8Pixel};
+use image::codecs::hdr::{HdrDecoder, Rgbe8Pixel};
 use image::{ImageError, ImageResult};
 use js_sys;
 use nalgebra::Vector3;
@@ -110,9 +110,9 @@ pub fn the_step_2(
     return js_sys::Float32Array::from(fs.as_slice());
 }
 
-fn read_hdr(env_map_buffer: &[u8]) -> ImageResult<(Vec<RGBE8Pixel>, u32, u32)> {
+fn read_hdr(env_map_buffer: &[u8]) -> ImageResult<(Vec<Rgbe8Pixel>, u32, u32)> {
     let buf_reader = BufReader::new(env_map_buffer);
-    let decoder = HDRDecoder::new(buf_reader);
+    let decoder = HdrDecoder::new(buf_reader);
 
     return decoder.and_then(|x| {
         let meta = x.metadata();

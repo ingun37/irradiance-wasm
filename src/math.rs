@@ -91,19 +91,7 @@ pub fn gen_side(
         .encode(pixels.as_slice(), map_size, map_size)
         .map(|_| buf);
 }
-pub fn gen_irradiance_diffuse_map(
-    env: &Vec<Rgbe8Pixel>,
-    env_width: usize,
-    env_height: usize,
-    sample_size: u32,
-    map_size: usize,
-) -> Result<Vec<Vec<u8>>, ImageError> {
-    let rotations = make_6_rotations();
-    let sides = rotations
-        .iter()
-        .map(|r| gen_side(env, env_width, env_height, map_size, r, sample_size));
-    return sides.collect();
-}
+
 fn radical_inverse_vdc(mut bits: u32) -> f32 {
     bits = (bits << 16) | (bits >> 16);
     bits = ((bits & 0x55555555) << 1) | ((bits & 0xAAAAAAAA) >> 1);

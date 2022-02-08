@@ -50,7 +50,7 @@ pub fn sample_equirect(
     return img[width * j + i];
 }
 static UP: Vector3<f32> = Vector3::new(0f32, 1f32, 0f32);
-fn gen_side(
+pub fn gen_side(
     env: &Vec<Rgbe8Pixel>,
     env_width: usize,
     env_height: usize,

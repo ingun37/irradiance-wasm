@@ -138,26 +138,29 @@ pub fn irradiance(
 ) -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
 
-    let maps = read_hdr(env_map_buffer).and_then(|(pxls, w, h)| {
-        math::gen_irradiance_diffuse_map(&pxls, w as usize, h as usize, sample_size, map_size)
-            .map_err(ImageError::from)
-    });
-
-    return maps.map_err(map_err_to_jsvalue).and_then(|maps| {
-        (0..maps.len())
-            .map(|i| {
-                let map = &maps[i];
-                let ptr = map.as_ptr();
-                let bytelen = map.len();
-                let idx_js = JsValue::from(i);
-                let ptr_js = JsValue::from(ptr as u32);
-                let bytelen_js = JsValue::from(bytelen);
-                callback
-                    .call3(&JsValue::null(), &idx_js, &ptr_js, &bytelen_js)
-                    .map(|_| ())
-            })
-            .collect::<Result<(), _>>()
-    });
+    let mut idx = -1;
+    read_hdr(env_map_buffer)
+        .and_then(|(pxls, w, h)| {
+            math::make_6_rotations()
+                .iter()
+                .map(|r| {
+                    math::gen_side(&pxls, w as usize, h as usize, map_size, r, sample_size)
+                        .and_then(|map| {
+                            let ptr = map.as_ptr();
+                            let bytelen = map.len();
+                            idx += 1;
+                            let idx_js = JsValue::from(idx);
+                            let ptr_js = JsValue::from(ptr as u32);
+                            let bytelen_js = JsValue::from(bytelen);
+                            callback
+                                .call3(&JsValue::null(), &idx_js, &ptr_js, &bytelen_js)
+                                .map(|_| ())
+                                .map_err(map_err_to_image_error)
+                        })
+                })
+                .collect()
+        })
+        .map_err(map_err_to_jsvalue)
 }
 
 #[wasm_bindgen]

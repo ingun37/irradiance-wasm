@@ -5,8 +5,8 @@ use image::{ImageError, ImageResult};
 use js_sys;
 use nalgebra::Vector3;
 use std::io::BufReader;
+use std::io::{Error, ErrorKind};
 use wasm_bindgen::prelude::*;
-
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
 #[cfg(feature = "wee_alloc")]
@@ -125,6 +125,10 @@ fn map_err_to_jsvalue(e: ImageError) -> JsValue {
     JsValue::from("image error")
 }
 
+fn map_err_to_image_error(e: JsValue) -> ImageError {
+    ImageError::from(Error::new(ErrorKind::Other, "jsval error"))
+}
+
 #[wasm_bindgen]
 pub fn irradiance(
     sample_size: u32,
@@ -158,43 +162,49 @@ pub fn irradiance(
 
 #[wasm_bindgen]
 pub fn specular(
-    sample_count: usize,
+    sample_size: usize,
     map_size: usize,
     env_map_buffer: &[u8],
     callback: &js_sys::Function,
     mip_levels: u32,
 ) -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
-    let maps = read_hdr(env_map_buffer).and_then(|(pxls, w, h)| {
-        math::gen_specular_map(
-            &pxls,
-            w as usize,
-            h as usize,
-            map_size,
-            sample_count,
-            mip_levels,
-        )
-        .map_err(ImageError::from)
-    });
     let mut idx = -1;
-    return maps.map_err(map_err_to_jsvalue).and_then(|mipmaps| {
-        mipmaps
-            .iter()
-            .map(|maps| {
-                maps.iter()
-                    .map(|map| {
-                        idx += 1;
-                        let ptr = map.as_ptr();
-                        let bytelen = map.len();
-                        let idx_js = JsValue::from(idx);
-                        let ptr_js = JsValue::from(ptr as u32);
-                        let bytelen_js = JsValue::from(bytelen);
-                        callback
-                            .call3(&JsValue::null(), &idx_js, &ptr_js, &bytelen_js)
-                            .map(|_| ())
-                    })
-                    .collect::<Result<(), _>>()
-            })
-            .collect()
-    });
+
+    read_hdr(env_map_buffer)
+        .and_then(|(pxls, w, h)| {
+            (0..mip_levels)
+                .map(|mip| {
+                    let mip_map_size = (0..mip).fold(map_size, |x, _| x / 2);
+                    let mip_roughness = (mip as f32) / ((mip_levels as f32) + 1f32);
+                    math::make_6_rotations()
+                        .iter()
+                        .map(|r| {
+                            math::gen_specular_map_side(
+                                &pxls,
+                                w as usize,
+                                h as usize,
+                                mip_map_size,
+                                r,
+                                mip_roughness,
+                                sample_size,
+                            )
+                            .and_then(|map| {
+                                idx += 1;
+                                let ptr = map.as_ptr();
+                                let bytelen = map.len();
+                                let idx_js = JsValue::from(idx);
+                                let ptr_js = JsValue::from(ptr as u32);
+                                let bytelen_js = JsValue::from(bytelen);
+                                callback
+                                    .call3(&JsValue::null(), &idx_js, &ptr_js, &bytelen_js)
+                                    .map(|_| ())
+                                    .map_err(map_err_to_image_error)
+                            })
+                        })
+                        .collect()
+                })
+                .collect()
+        })
+        .map_err(map_err_to_jsvalue)
 }

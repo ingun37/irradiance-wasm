@@ -190,7 +190,7 @@ pub fn sample_specular(
     total_rgb
 }
 
-fn gen_specular_map_side(
+pub fn gen_specular_map_side(
     env: &Vec<Rgbe8Pixel>,
     env_width: usize,
     env_height: usize,
@@ -220,34 +220,4 @@ fn gen_specular_map_side(
     return encoder
         .encode(pixels.as_slice(), map_size, map_size)
         .map(|_| buf);
-}
-
-pub fn gen_specular_map(
-    env: &Vec<Rgbe8Pixel>,
-    env_width: usize,
-    env_height: usize,
-    map_size: usize,
-    sample_size: usize,
-    mip_levels: u32,
-) -> Result<Vec<Vec<Vec<u8>>>, ImageError> {
-    return (0..mip_levels)
-        .map(|mip| {
-            let mip_map_size = (0..mip).fold(map_size, |x, _| x / 2);
-            let mip_roughness = (mip as f32) / ((mip_levels as f32) + 1f32);
-            make_6_rotations()
-                .iter()
-                .map(|r| {
-                    gen_specular_map_side(
-                        env,
-                        env_width,
-                        env_height,
-                        mip_map_size,
-                        r,
-                        mip_roughness,
-                        sample_size,
-                    )
-                })
-                .collect()
-        })
-        .collect();
 }

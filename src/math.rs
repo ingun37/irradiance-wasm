@@ -3,8 +3,6 @@ use image::{ImageError, Rgb};
 use nalgebra::{Rotation3, Vector2, Vector3};
 use std::f32::consts::PI;
 pub mod fibonacci_hemi_sphere;
-mod rgb_ex;
-use rgb_ex::Rgbw;
 
 pub fn make_6_rotations() -> [Rotation3<f32>; 6] {
     let q = PI / 2f32;

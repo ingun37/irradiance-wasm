@@ -49,9 +49,8 @@ pub fn greet() {
 
 #[wasm_bindgen]
 pub fn fibonacci_hemi_sphere(sample_size: u32) -> js_sys::Float32Array {
-    let rust_array = math::fibonacci_hemi_sphere(sample_size);
-    let fs: Vec<f32> = rust_array
-        .iter()
+    let fs: Vec<f32> = (0..sample_size)
+        .map(|i| math::fibonacci_hemi_sphere::nth(sample_size, i))
         .map(|(v, w)| vec![v.x * w, v.y * w, v.z * w])
         .flatten()
         .collect();

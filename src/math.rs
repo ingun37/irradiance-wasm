@@ -2,7 +2,7 @@ use image::hdr::{HDREncoder, RGBE8Pixel};
 use image::Rgb;
 use nalgebra::{Rotation3, Vector2, Vector3};
 use std::f32::consts::PI;
-
+pub mod fibonacci_hemi_sphere;
 pub fn make_6_rotations() -> [Rotation3<f32>; 6] {
     let q = PI / 2f32;
     // PY,  PZ,  NX,    NZ,   PX,        NY,
@@ -16,22 +16,6 @@ pub fn make_6_rotations() -> [Rotation3<f32>; 6] {
         yq * yq * yq * xq,
         xq * xq,
     ];
-}
-
-pub fn fibonacci_hemi_sphere(sample_size: u32) -> Vec<(Vector3<f32>, f32)> {
-    let phi = PI * ((3f32) - (5f32).sqrt());
-    let sample_size_f = sample_size as f32;
-    return (0..sample_size)
-        .map(|i| i as f32)
-        .map(|i| {
-            let y = 1f32 - (i / (sample_size_f - 1f32)); // y goes from 1 to 0 (hemisphere)
-            let radius = (1f32 - y * y).sqrt(); //  # radius at y
-            let theta = phi * i; //  # golden angle increment
-            let x = theta.cos() * radius;
-            let z = theta.sin() * radius;
-            (Vector3::new(x, y, z), y.asin())
-        })
-        .collect();
 }
 
 fn sample_vec(map_size: usize, side_rot: &Rotation3<f32>, ij: usize) -> Vector3<f32> {
@@ -71,7 +55,7 @@ fn gen_side(
     env_height: usize,
     map_size: usize,
     side_rot: &Rotation3<f32>,
-    hemi: &Vec<(Vector3<f32>, f32)>,
+    sample_size: u32,
 ) -> Result<Vec<u8>, std::io::Error> {
     let mut buf: Vec<u8> = Vec::new();
     let encoder = HDREncoder::new(&mut buf);
@@ -80,20 +64,20 @@ fn gen_side(
         .map(|dir| {
             let mut rot_try = Rotation3::rotation_between(&UP, &dir);
             let rot = rot_try.get_or_insert(Rotation3::from_euler_angles(0f32, 0f32, PI));
-            let hemi_len_f = hemi.len() as f32;
-
             // TODO: use wgpu
-            let sum = hemi
-                .iter()
-                .map(|(_v, w)| {
-                    let v = (*rot) * _v;
+            let sum = (0..sample_size)
+                .map(|i| {
+                    let (v, w) = fibonacci_hemi_sphere::nth(sample_size, i);
+                    (((*rot) * v), w)
+                })
+                .map(|(v, w)| {
                     let sample = sample_equirect(env, env_width, env_height, v.x, v.y, v.z);
                     let rgb = sample.to_hdr();
-                    Vector3::new(rgb[0], rgb[1], rgb[2]) * (*w)
+                    Vector3::new(rgb[0], rgb[1], rgb[2]) * w
                 })
                 .sum::<Vector3<f32>>()
                 * PI
-                / hemi_len_f;
+                / sample_size as f32;
 
             image::Rgb {
                 data: [sum.x, sum.y, sum.z],
@@ -112,11 +96,10 @@ pub fn gen_irradiance_diffuse_map(
     sample_size: u32,
     map_size: usize,
 ) -> Result<Vec<Vec<u8>>, std::io::Error> {
-    let hemi = fibonacci_hemi_sphere(sample_size);
     let rotations = make_6_rotations();
     let sides = rotations
         .iter()
-        .map(|r| gen_side(env, env_width, env_height, map_size, r, &hemi));
+        .map(|r| gen_side(env, env_width, env_height, map_size, r, sample_size));
     return sides.collect();
 }
 fn radical_inverse_vdc(mut bits: u32) -> f32 {

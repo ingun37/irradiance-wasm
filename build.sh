@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-wasm-pack build
+RUSTFLAGS=--cfg=web_sys_unstable_apis wasm-pack build

@@ -1,5 +1,6 @@
 mod math;
 mod utils;
+use futures::future::FutureExt;
 use image::codecs::hdr::{HdrDecoder, Rgbe8Pixel};
 use image::{ImageError, ImageResult};
 use js_sys;
@@ -7,6 +8,7 @@ use nalgebra::Vector3;
 use std::io::BufReader;
 use std::io::{Error, ErrorKind};
 use wasm_bindgen::prelude::*;
+
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
 #[cfg(feature = "wee_alloc")]
@@ -210,4 +212,27 @@ pub fn specular(
                 .collect()
         })
         .map_err(map_err_to_jsvalue)
+}
+
+#[wasm_bindgen]
+pub async fn wasmtest() -> Result<(), JsValue> {
+    let instance = wgpu::Instance::new(wgpu::Backends::all());
+    let adapter = instance
+        .request_adapter(&wgpu::RequestAdapterOptions::default())
+        .map(|x| x.ok_or(JsValue::from("failed to create adapter")))
+        .await?;
+    let (device, queue) = adapter
+        .request_device(
+            &wgpu::DeviceDescriptor {
+                label: None,
+                features: wgpu::Features::empty(),
+                limits: wgpu::Limits::downlevel_defaults(),
+            },
+            None,
+        )
+        .await
+        .unwrap();
+
+    Ok(())
+    // todo!()
 }

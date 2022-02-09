@@ -114,6 +114,7 @@ const Everything = () => {
         </Item>
       </Stack>
       <VisualDebug />
+      <Button onClick={() => wasm.wasmtest()}>Wasm test</Button>
     </Stack>
   );
 };

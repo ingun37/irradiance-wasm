@@ -5,12 +5,14 @@ import Paper from "@mui/material/Paper";
 import PointsViewer from "./points-viewer";
 import * as wasm from "../../../pkg";
 import { roughness } from "../consts";
-import { Button, Link, TextField, Typography } from "@mui/material";
+import { Button, TextField, Typography } from "@mui/material";
 import { useState } from "react";
 import {
   generateDiffuseIrradianceMap,
   generatePreFilteredSpecularMap,
 } from "../util";
+import VisualDebug from "./visual-debug";
+import Header from "./header";
 const Item = styled(Paper)(({ theme }) => ({
   ...theme.typography.body2,
   padding: theme.spacing(1),
@@ -28,20 +30,7 @@ const Everything = () => {
 
   return (
     <Stack spacing={2} alignItems="center">
-      <Typography variant="h3" component="div" gutterBottom>
-        Diffuse Irradiance & Pre-Filtered Environment Map Generator
-      </Typography>
-      <Typography variant="subtitle1" gutterBottom component="div">
-        This is a demo of Rust-WASM implementation of{" "}
-        <Link href="https://learnopengl.com/PBR/IBL/Diffuse-irradiance">
-          Diffuse Irradiance Map
-        </Link>
-        &nbsp;and&nbsp;
-        <Link href="https://learnopengl.com/PBR/IBL/Specular-IBL">
-          Pre-Filtered Environment Map
-        </Link>
-        &nbsp;generation algorithms.
-      </Typography>
+      <Header />
       <Stack direction="row" spacing={2}>
         <Item>
           <Stack spacing={2} alignItems="center">
@@ -124,35 +113,7 @@ const Everything = () => {
           </Stack>
         </Item>
       </Stack>
-
-      <Stack direction="row" spacing={2}>
-        <Item>
-          <Typography>Hammersley Sequence</Typography>
-
-          <PointsViewer
-            buffer={() => wasm.hammersleys(300)}
-            itemSize={2}
-            uniqueId="hammersly"
-          />
-        </Item>
-        <Item>
-          <Typography>GGXS</Typography>
-          <PointsViewer
-            buffer={() => wasm.ggxs(1, 1, 1, roughness, 60)}
-            itemSize={3}
-            uniqueId="ggxs"
-          />
-        </Item>
-        <Item>
-          <Typography>thestep</Typography>
-
-          <PointsViewer
-            buffer={() => wasm.the_step(1, 1, 1, roughness, 60)}
-            itemSize={3}
-            uniqueId="thestep"
-          />
-        </Item>
-      </Stack>
+      <VisualDebug />
     </Stack>
   );
 };

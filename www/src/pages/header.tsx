@@ -2,7 +2,7 @@ import * as React from "react";
 import { Box, Link, Typography } from "@mui/material";
 export default function Header() {
   return (
-    <Box>
+    <Box textAlign="center">
       <Typography variant="h3" component="div" gutterBottom>
         Diffuse Irradiance & Pre-Filtered Environment Map Generator
       </Typography>

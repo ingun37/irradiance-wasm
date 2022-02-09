@@ -10,6 +10,7 @@ import { useState } from "react";
 import {
   generateDiffuseIrradianceMap,
   generatePreFilteredSpecularMap,
+  wasmtest,
 } from "../util";
 import VisualDebug from "./visual-debug";
 import Header from "./header";
@@ -114,7 +115,7 @@ const Everything = () => {
         </Item>
       </Stack>
       <VisualDebug />
-      <Button onClick={() => wasm.wasmtest()}>Wasm test</Button>
+      <Button onClick={wasmtest}>Wasm test</Button>
     </Stack>
   );
 };

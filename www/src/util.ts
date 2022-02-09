@@ -104,3 +104,9 @@ export function generatePreFilteredSpecularMap(
     );
   });
 }
+
+export function wasmtest() {
+  fetch("/shader.wgsl")
+    .then((x) => x.text())
+    .then((shaderCode) => wasm.wasmtest(shaderCode));
+}

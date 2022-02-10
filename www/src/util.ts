@@ -1,4 +1,5 @@
 import { ArrowHelper, Object3D, Vector3 } from "three";
+
 import { zip } from "fp-ts/Array";
 import * as wasm from "../../pkg";
 import * as wasm_bg from "../../pkg/irradiance_wasm_bg.wasm";

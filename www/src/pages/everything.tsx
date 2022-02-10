@@ -6,7 +6,7 @@ import Paper from "@mui/material/Paper";
 import PointsViewer from "./points-viewer";
 import * as wasm from "../../../pkg";
 import { roughness } from "../consts";
-import { Button, TextField, Typography } from "@mui/material";
+import { Button, Container, TextField, Typography } from "@mui/material";
 import {
   downloadBlob,
   generateDiffuseIrradianceMap,
@@ -17,6 +17,7 @@ import VisualDebug from "./visual-debug";
 import Header from "./header";
 import StatusTable, { StatusData } from "./status-table";
 import * as fflate from "fflate";
+import PMREMDebug from "./pmrem-debug";
 
 const Item = styled(Paper)(({ theme }) => ({
   ...theme.typography.body2,
@@ -158,6 +159,9 @@ export default function Everything() {
       </Button>
       <StatusTable statusItems={statusItems} />
       <Button onClick={wasmtest}>Wasm test</Button>
+      <Container>
+        <PMREMDebug />
+      </Container>
     </Stack>
   );
 }

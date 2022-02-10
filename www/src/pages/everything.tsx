@@ -13,7 +13,7 @@ import {
   generatePreFilteredSpecularMap,
   wasmtest,
 } from "../util";
-import VisualDebug from "./visual-debug";
+// import VisualDebug from "./visual-debug";
 import Header from "./header";
 import StatusTable, { StatusData } from "./status-table";
 import * as fflate from "fflate";
@@ -63,15 +63,17 @@ export default function Everything() {
             />
             <Button
               onClick={() => {
-                generateDiffuseIrradianceMap().then((buffers) => {
-                  const items = buffers.map((buffer, idx): StatusData => {
-                    return {
-                      name: `Environment_c0${idx}.png.hdr`,
-                      buffer,
-                    };
-                  });
-                  setStatusItems(items);
-                });
+                generateDiffuseIrradianceMap(diffuseSampleSize).then(
+                  (buffers) => {
+                    const items = buffers.map((buffer, idx): StatusData => {
+                      return {
+                        name: `Environment_c0${idx}.png.hdr`,
+                        buffer,
+                      };
+                    });
+                    setStatusItems(items);
+                  }
+                );
               }}
             >
               generate
@@ -144,7 +146,7 @@ export default function Everything() {
           </Stack>
         </Item>
       </Stack>
-      <VisualDebug />
+      {/*<VisualDebug />*/}
       <Button
         onClick={() => {
           let z: any = {};

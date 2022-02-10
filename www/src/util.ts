@@ -55,11 +55,11 @@ export function fetchSampleHDR() {
     .then((x) => new Uint8Array(x));
 }
 
-export function generateDiffuseIrradianceMap() {
+export function generateDiffuseIrradianceMap(sampleSize: number) {
   return fetchSampleHDR().then((ab) => {
     let buffers: Uint8Array[] = [];
     wasm.irradiance(
-      1000,
+      sampleSize,
       64,
       ab,
       (idx: bigint, offset: number, size: bigint) => {

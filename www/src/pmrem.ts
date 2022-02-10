@@ -5,6 +5,7 @@ import {
   Mesh,
   MeshStandardMaterial,
   PerspectiveCamera,
+  PMREMGenerator,
   Scene,
   TorusKnotGeometry,
   WebGLRenderer,
@@ -45,7 +46,7 @@ export function pmrem(width: number, height: number, domID: string) {
   planeMesh.rotation.x = -Math.PI * 0.5;
   scene.add(planeMesh);
 
-  const pmremGenerator = new THREE.PMREMGenerator(renderer);
+  const pmremGenerator = new PMREMGenerator(renderer);
   pmremGenerator.compileCubemapShader();
 
   // const envScene = new DebugEnvironment();

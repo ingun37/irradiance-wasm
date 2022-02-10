@@ -6,17 +6,30 @@ pub mod fibonacci_hemi_sphere;
 
 pub fn make_6_rotations() -> [Rotation3<f32>; 6] {
     let q = PI / 2f32;
-    // PY,  PZ,  NX,    NZ,   PX,        NY,
+
+    // PX NX PY NY PZ NZ
     let xq = Rotation3::from_euler_angles(q, 0f32, 0f32);
     let yq = Rotation3::from_euler_angles(0f32, q, 0f32);
     return [
-        Rotation3::from_euler_angles(0f32, 0f32, 0f32),
-        xq,
-        yq * xq,
-        yq * yq * xq,
         yq * yq * yq * xq,
+        yq * xq,
+
+        Rotation3::from_euler_angles(0f32, 0f32, 0f32),
         xq * xq,
+        xq,
+        yq * yq * xq,
+
     ];
+    // PY,  PZ,  NX,    NZ,   PX,        NY,
+
+    // return [
+    //     Rotation3::from_euler_angles(0f32, 0f32, 0f32),
+    //     xq,
+    //     yq * xq,
+    //     yq * yq * xq,
+    //     yq * yq * yq * xq,
+    //     xq * xq,
+    // ];
 }
 
 fn sample_vec(map_size: usize, side_rot: &Rotation3<f32>, ij: usize) -> Vector3<f32> {

@@ -126,6 +126,26 @@ fn read_hdr(env_map_buffer: &[u8]) -> ImageResult<(Vec<Rgbe8Pixel>, u32, u32)> {
 }
 
 fn map_err_to_jsvalue(e: ImageError) -> JsValue {
+    match e {
+        ImageError::Decoding(e) => {
+            console_log!("{}", e)
+        }
+        ImageError::Encoding(e) => {
+            console_log!("{}", e)
+        }
+        ImageError::Parameter(e) => {
+            console_log!("{}", e)
+        }
+        ImageError::Limits(e) => {
+            console_log!("{}", e)
+        }
+        ImageError::Unsupported(e) => {
+            console_log!("{}", e)
+        }
+        ImageError::IoError(e) => {
+            console_log!("{}", e)
+        }
+    }
     JsValue::from("image error")
 }
 

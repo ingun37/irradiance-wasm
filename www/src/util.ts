@@ -55,7 +55,8 @@ export function fetchSampleHDR() {
 }
 
 export function generateDiffuseIrradianceMap() {
-  fetchSampleHDR().then((ab) => {
+  return fetchSampleHDR().then((ab) => {
+    let buffers: Uint8Array[] = [];
     wasm.irradiance(
       1000,
       64,
@@ -68,21 +69,21 @@ export function generateDiffuseIrradianceMap() {
         );
         const cp = new Uint8Array(new ArrayBuffer(Number(size)));
         cp.set(hdrBuf);
-        setTimeout(
-          () => downloadBlob(cp, idx.toString() + ".hdr"),
-          2000 * (Number(idx) + 1)
-        );
+        buffers.push(cp);
       }
     );
+    return buffers;
   });
 }
 
-export function generatePreFilteredSpecularMap(
+export async function generatePreFilteredSpecularMap(
   sampleCount: number,
   mapSize: number,
   mipLevels: number
 ) {
-  fetchSampleHDR().then((ab) => {
+  return fetchSampleHDR().then((ab) => {
+    let buffers: Uint8Array[] = [];
+
     wasm.specular(
       sampleCount,
       mapSize,
@@ -95,13 +96,11 @@ export function generatePreFilteredSpecularMap(
         );
         const cp = new Uint8Array(new ArrayBuffer(Number(size)));
         cp.set(hdrBuf);
-        setTimeout(
-          () => downloadBlob(cp, idx.toString() + ".hdr"),
-          2000 * (Number(idx) + 1)
-        );
+        buffers.push(cp);
       },
       mipLevels
     );
+    return buffers;
   });
 }
 
@@ -109,4 +108,8 @@ export function wasmtest() {
   fetch("/shader.wgsl")
     .then((x) => x.text())
     .then((shaderCode) => wasm.wasmtest(shaderCode));
+}
+
+export function tup<A, B>(a: A, b: B): [A, B] {
+  return [a, b];
 }

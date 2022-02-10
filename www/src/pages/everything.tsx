@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useState } from "react";
 import Stack from "@mui/material/Stack";
 import { styled } from "@mui/material/styles";
 import Paper from "@mui/material/Paper";
@@ -6,14 +7,17 @@ import PointsViewer from "./points-viewer";
 import * as wasm from "../../../pkg";
 import { roughness } from "../consts";
 import { Button, TextField, Typography } from "@mui/material";
-import { useState } from "react";
 import {
+  downloadBlob,
   generateDiffuseIrradianceMap,
   generatePreFilteredSpecularMap,
   wasmtest,
 } from "../util";
 import VisualDebug from "./visual-debug";
 import Header from "./header";
+import StatusTable, { StatusData } from "./status-table";
+import * as fflate from "fflate";
+
 const Item = styled(Paper)(({ theme }) => ({
   ...theme.typography.body2,
   padding: theme.spacing(1),
@@ -23,7 +27,8 @@ const Item = styled(Paper)(({ theme }) => ({
   // height: "300px",
 }));
 
-const Everything = () => {
+export default function Everything() {
+  const [statusItems, setStatusItems] = useState<StatusData[]>([]);
   const [diffuseSampleSize, setDiffuseSampleSize] = useState(1000);
   const [specularSampleSize, setSpecularSampleSize] = useState(1000);
   const [specularMapSize, setSpecularMapSize] = useState(128);
@@ -55,7 +60,21 @@ const Everything = () => {
                 setDiffuseSampleSize(Number.parseInt(e.target.value))
               }
             />
-            <Button onClick={generateDiffuseIrradianceMap}>generate</Button>
+            <Button
+              onClick={() => {
+                generateDiffuseIrradianceMap().then((buffers) => {
+                  const items = buffers.map((buffer, idx): StatusData => {
+                    return {
+                      name: `Environment_c0${idx}.png.hdr`,
+                      buffer,
+                    };
+                  });
+                  setStatusItems(items);
+                });
+              }}
+            >
+              generate
+            </Button>
           </Stack>
         </Item>
         <Item>
@@ -101,13 +120,23 @@ const Everything = () => {
               />
             </Stack>
             <Button
-              onClick={() =>
+              onClick={() => {
                 generatePreFilteredSpecularMap(
                   specularSampleSize,
                   specularMapSize,
                   specularMipLevels
-                )
-              }
+                ).then((buffers) => {
+                  const items = buffers.map((buffer, idx): StatusData => {
+                    return {
+                      name: `Environment_m0${Math.floor(idx / 6)}_c0${
+                        idx % 6
+                      }.png.hdr`,
+                      buffer,
+                    };
+                  });
+                  setStatusItems(items);
+                });
+              }}
             >
               generate
             </Button>
@@ -115,9 +144,20 @@ const Everything = () => {
         </Item>
       </Stack>
       <VisualDebug />
+      <Button
+        onClick={() => {
+          let z: any = {};
+          for (const statusItem of statusItems) {
+            z[statusItem.name] = statusItem.buffer;
+          }
+          const zipped = fflate.zipSync(z);
+          downloadBlob(zipped, "environment-maps.zip");
+        }}
+      >
+        Download All
+      </Button>
+      <StatusTable statusItems={statusItems} />
       <Button onClick={wasmtest}>Wasm test</Button>
     </Stack>
   );
-};
-
-export default Everything;
+}

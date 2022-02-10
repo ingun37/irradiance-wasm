@@ -105,7 +105,7 @@ export async function generatePreFilteredSpecularMap(
   });
 }
 
-export function wasmtest() {
+export function webGpuTest() {
   fetch("/shader.wgsl")
     .then((x) => x.text())
     .then((shaderCode) => wasm.wasmtest(shaderCode));

@@ -11,11 +11,11 @@ import {
   downloadBlob,
   generateDiffuseIrradianceMap,
   generatePreFilteredSpecularMap,
-  wasmtest,
+  webGpuTest,
 } from "../util";
 // import VisualDebug from "./visual-debug";
 import Header from "./header";
-import StatusTable, { StatusData } from "./status-table";
+import StatusTable from "./status-table";
 import * as fflate from "fflate";
 import PMREMDebug from "./pmrem-debug";
 
@@ -29,7 +29,7 @@ const Item = styled(Paper)(({ theme }) => ({
 }));
 
 export default function Everything() {
-  const [statusItems, setStatusItems] = useState<StatusData[]>([]);
+  const [items, setItems] = useState<Map<string, Uint8Array>>(new Map());
   const [diffuseSampleSize, setDiffuseSampleSize] = useState(1000);
   const [specularSampleSize, setSpecularSampleSize] = useState(1000);
   const [specularMapSize, setSpecularMapSize] = useState(128);
@@ -65,13 +65,13 @@ export default function Everything() {
               onClick={() => {
                 generateDiffuseIrradianceMap(diffuseSampleSize).then(
                   (buffers) => {
-                    const items = buffers.map((buffer, idx): StatusData => {
-                      return {
-                        name: `Environment_c0${idx}.png.hdr`,
-                        buffer,
-                      };
-                    });
-                    setStatusItems(items);
+                    setItems(
+                      buffers.reduce(
+                        (m, buffer, idx) =>
+                          m.set(`Environment_c0${idx}.png.hdr`, buffer),
+                        new Map()
+                      )
+                    );
                   }
                 );
               }}
@@ -129,15 +129,18 @@ export default function Everything() {
                   specularMapSize,
                   specularMipLevels
                 ).then((buffers) => {
-                  const items = buffers.map((buffer, idx): StatusData => {
-                    return {
-                      name: `Environment_m0${Math.floor(idx / 6)}_c0${
-                        idx % 6
-                      }.png.hdr`,
-                      buffer,
-                    };
-                  });
-                  setStatusItems(items);
+                  setItems(
+                    buffers.reduce(
+                      (m, buffer, idx) =>
+                        m.set(
+                          `Environment_m0${Math.floor(idx / 6)}_c0${
+                            idx % 6
+                          }.png.hdr`,
+                          buffer
+                        ),
+                      new Map()
+                    )
+                  );
                 });
               }}
             >
@@ -150,17 +153,17 @@ export default function Everything() {
       <Button
         onClick={() => {
           let z: any = {};
-          for (const statusItem of statusItems) {
-            z[statusItem.name] = statusItem.buffer;
-          }
+          items.forEach((buffer, name) => {
+            z[name] = buffer;
+          });
           const zipped = fflate.zipSync(z);
           downloadBlob(zipped, "environment-maps.zip");
         }}
       >
         Download All
       </Button>
-      <StatusTable statusItems={statusItems} />
-      <Button onClick={wasmtest}>Wasm test</Button>
+      <StatusTable names={Array.from(items.keys())} />
+      <Button onClick={webGpuTest}>WebGPU test</Button>
       <Container>
         <PMREMDebug />
       </Container>

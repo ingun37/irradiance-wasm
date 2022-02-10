@@ -9,11 +9,7 @@ import {
   TableRow,
 } from "@mui/material";
 
-export type StatusData = {
-  name: string;
-  buffer: Uint8Array;
-};
-export default function StatusTable(props: { statusItems: StatusData[] }) {
+export default function StatusTable(props: { names: string[] }) {
   return (
     <TableContainer component={Paper}>
       <Table sx={{ minWidth: 650 }} size="small" aria-label="a dense table">
@@ -23,14 +19,16 @@ export default function StatusTable(props: { statusItems: StatusData[] }) {
           </TableRow>
         </TableHead>
         <TableBody>
-          {props.statusItems.map((row) => (
-            <TableRow
-              key={row.name}
-              sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-            >
-              <TableCell>{row.name}</TableCell>
-            </TableRow>
-          ))}
+          {props &&
+            props.names &&
+            props.names.map((row) => (
+              <TableRow
+                key={row}
+                sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+              >
+                <TableCell>{row}</TableCell>
+              </TableRow>
+            ))}
         </TableBody>
       </Table>
     </TableContainer>

@@ -1,8 +1,8 @@
 import { ArrowHelper, Object3D, Vector3 } from "three";
 
 import { zip } from "fp-ts/Array";
-import * as wasm from "../../pkg";
-import * as wasm_bg from "../../pkg/irradiance_wasm_bg.wasm";
+import * as wasm from "irradiance-wasm";
+import * as wasm_bg from "irradiance-wasm/irradiance_wasm_bg.wasm";
 
 export function downloadURL(data, fileName) {
   const a = document.createElement("a");
@@ -55,12 +55,16 @@ export function fetchSampleHDR() {
     .then((x) => new Uint8Array(x));
 }
 
-export function generateDiffuseIrradianceMap(sampleSize: number) {
+export function generateDiffuseIrradianceMap(
+  sampleSize: number,
+  eLimit: number
+) {
   return fetchSampleHDR().then((ab) => {
     let buffers: Uint8Array[] = [];
     wasm.irradiance(
       sampleSize,
       64,
+      eLimit,
       ab,
       (idx: bigint, offset: number, size: bigint) => {
         const hdrBuf = new Uint8Array(
@@ -80,7 +84,8 @@ export function generateDiffuseIrradianceMap(sampleSize: number) {
 export async function generatePreFilteredSpecularMap(
   sampleCount: number,
   mapSize: number,
-  mipLevels: number
+  mipLevels: number,
+  eLimit: number
 ) {
   return fetchSampleHDR().then((ab) => {
     let buffers: Uint8Array[] = [];
@@ -99,7 +104,8 @@ export async function generatePreFilteredSpecularMap(
         cp.set(hdrBuf);
         buffers.push(cp);
       },
-      mipLevels
+      mipLevels,
+      eLimit
     );
     return buffers;
   });

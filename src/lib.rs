@@ -2,12 +2,10 @@ mod math;
 mod utils;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
-use image::codecs::hdr::{HdrDecoder, Rgbe8Pixel};
-use image::{ImageError, ImageResult};
+use image::ImageError;
 use js_sys;
 use nalgebra::Vector3;
 use std::borrow::Cow;
-use std::io::BufReader;
 use std::io::{Error, ErrorKind};
 use wasm_bindgen::prelude::*;
 use wgpu::util::DeviceExt;
@@ -114,17 +112,6 @@ pub fn the_step_2(
     return js_sys::Float32Array::from(fs.as_slice());
 }
 
-fn read_hdr(env_map_buffer: &[u8]) -> ImageResult<(Vec<Rgbe8Pixel>, u32, u32)> {
-    let buf_reader = BufReader::new(env_map_buffer);
-    let decoder = HdrDecoder::new(buf_reader);
-
-    return decoder.and_then(|x| {
-        let meta = x.metadata();
-        x.read_image_native()
-            .map(|pxls| (pxls, meta.width, meta.height))
-    });
-}
-
 fn map_err_to_jsvalue(e: ImageError) -> JsValue {
     match e {
         ImageError::Decoding(e) => {
@@ -161,30 +148,39 @@ fn map_err_to_image_error(e: JsValue) -> ImageError {
 pub fn irradiance(
     sample_size: u32,
     map_size: usize,
+    e_limit: u8,
     env_map_buffer: &[u8],
     callback: &js_sys::Function,
 ) -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
 
     let mut idx = -1;
-    read_hdr(env_map_buffer)
+    math::read_hdr(env_map_buffer)
         .and_then(|(pxls, w, h)| {
             math::make_6_rotations()
                 .iter()
                 .map(|r| {
-                    math::gen_side(&pxls, w as usize, h as usize, map_size, r, sample_size)
-                        .and_then(|map| {
-                            let ptr = map.as_ptr();
-                            let bytelen = map.len();
-                            idx += 1;
-                            let idx_js = JsValue::from(idx);
-                            let ptr_js = JsValue::from(ptr as u32);
-                            let bytelen_js = JsValue::from(bytelen);
-                            callback
-                                .call3(&JsValue::null(), &idx_js, &ptr_js, &bytelen_js)
-                                .map(|_| ())
-                                .map_err(map_err_to_image_error)
-                        })
+                    math::gen_side(
+                        &pxls,
+                        w as usize,
+                        h as usize,
+                        map_size,
+                        r,
+                        sample_size,
+                        e_limit,
+                    )
+                    .and_then(|map| {
+                        let ptr = map.as_ptr();
+                        let bytelen = map.len();
+                        idx += 1;
+                        let idx_js = JsValue::from(idx);
+                        let ptr_js = JsValue::from(ptr as u32);
+                        let bytelen_js = JsValue::from(bytelen);
+                        callback
+                            .call3(&JsValue::null(), &idx_js, &ptr_js, &bytelen_js)
+                            .map(|_| ())
+                            .map_err(map_err_to_image_error)
+                    })
                 })
                 .collect()
         })
@@ -198,11 +194,12 @@ pub fn specular(
     env_map_buffer: &[u8],
     callback: &js_sys::Function,
     mip_levels: u32,
+    e_limit: u8,
 ) -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
     let mut idx = -1;
 
-    read_hdr(env_map_buffer)
+    math::read_hdr(env_map_buffer)
         .and_then(|(pxls, w, h)| {
             (0..mip_levels)
                 .map(|mip| {
@@ -219,6 +216,7 @@ pub fn specular(
                                 r,
                                 mip_roughness,
                                 sample_size,
+                                e_limit,
                             )
                             .and_then(|map| {
                                 idx += 1;

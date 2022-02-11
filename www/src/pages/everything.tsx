@@ -18,6 +18,7 @@ import Header from "./header";
 import StatusTable from "./status-table";
 import * as fflate from "fflate";
 import PMREMDebug from "./pmrem-debug";
+import OutlierDebug from "./outlier-debug";
 
 const Item = styled(Paper)(({ theme }) => ({
   ...theme.typography.body2,
@@ -34,10 +35,17 @@ export default function Everything() {
   const [specularSampleSize, setSpecularSampleSize] = useState(1000);
   const [specularMapSize, setSpecularMapSize] = useState(128);
   const [specularMipLevels, setSpecularMipLevels] = useState(6);
-
+  const [eLimit, setELimit] = useState(136);
   return (
     <Stack spacing={2} alignItems="center">
       <Header />
+      <TextField
+        id="outlined-number"
+        label="e limit"
+        type="number"
+        value={eLimit}
+        onChange={(e) => setELimit(Number.parseInt(e.target.value))}
+      />
       <Stack direction="row" spacing={2}>
         <Item>
           <Stack spacing={2} alignItems="center">
@@ -63,7 +71,7 @@ export default function Everything() {
             />
             <Button
               onClick={() => {
-                generateDiffuseIrradianceMap(diffuseSampleSize).then(
+                generateDiffuseIrradianceMap(diffuseSampleSize, eLimit).then(
                   (buffers) => {
                     setItems(
                       buffers.reduce(
@@ -127,7 +135,8 @@ export default function Everything() {
                 generatePreFilteredSpecularMap(
                   specularSampleSize,
                   specularMapSize,
-                  specularMipLevels
+                  specularMipLevels,
+                  eLimit
                 ).then((buffers) => {
                   setItems(
                     buffers.reduce(
@@ -166,6 +175,9 @@ export default function Everything() {
       <Button onClick={webGpuTest}>WebGPU test</Button>
       <Container>
         <PMREMDebug />
+      </Container>
+      <Container>
+        <OutlierDebug />
       </Container>
     </Stack>
   );

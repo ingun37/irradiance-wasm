@@ -1,7 +1,9 @@
-use image::codecs::hdr::{HdrEncoder, Rgbe8Pixel};
-use image::{ImageError, Rgb};
+use image::codecs::hdr::{HdrDecoder, HdrEncoder, Rgbe8Pixel};
+use image::{ImageError, ImageResult, Rgb};
 use nalgebra::{Rotation3, Vector2, Vector3};
 use std::f32::consts::PI;
+use std::io::BufReader;
+
 pub mod fibonacci_hemi_sphere;
 
 pub fn make_6_rotations() -> [Rotation3<f32>; 6] {
@@ -13,12 +15,10 @@ pub fn make_6_rotations() -> [Rotation3<f32>; 6] {
     return [
         yq * yq * yq * xq,
         yq * xq,
-
         Rotation3::from_euler_angles(0f32, 0f32, 0f32),
         xq * xq,
         xq,
         yq * yq * xq,
-
     ];
     // PY,  PZ,  NX,    NZ,   PX,        NY,
 
@@ -70,6 +70,7 @@ pub fn gen_side(
     map_size: usize,
     side_rot: &Rotation3<f32>,
     sample_size: u32,
+    e_limit: u8,
 ) -> Result<Vec<u8>, ImageError> {
     let mut buf: Vec<u8> = Vec::new();
     let encoder = HdrEncoder::new(&mut buf);
@@ -86,8 +87,11 @@ pub fn gen_side(
                     (((*rot) * v), w)
                 })
                 .for_each(|(v, w)| {
-                    let rgb =
-                        sample_equirect(env, env_width, env_height, v.x, v.y, v.z).to_hdr();
+                    let rgbe = sample_equirect(env, env_width, env_height, v.x, v.y, v.z);
+                    if e_limit < rgbe.e {
+                        return;
+                    }
+                    let rgb = rgbe.to_hdr();
                     for i in 0..3 {
                         total_rgb[i] += rgb[i] * w;
                     }
@@ -167,6 +171,7 @@ pub fn sample_specular(
     nz: f32,
     roughness: f32,
     sample_size: usize,
+    e_limit: u8,
 ) -> Rgb<f32> {
     let n = Vector3::new(nx, ny, nz).normalize();
     let mut total_weight = 0f32;
@@ -178,7 +183,12 @@ pub fn sample_specular(
         .map(|h| the_step(&n, &h))
         .flat_map(|l| the_step_2(&n, &l))
         .for_each(|(v, w)| {
-            let rgb = sample_equirect(envmap, width, height, v.x, v.y, v.z).to_hdr();
+            let rgbe = sample_equirect(envmap, width, height, v.x, v.y, v.z);
+            if e_limit < rgbe.e {
+                return;
+            }
+            let rgb = rgbe.to_hdr();
+
             for i in 0..3 {
                 total_rgb[i] += rgb[i] * w;
             }
@@ -199,6 +209,7 @@ pub fn gen_specular_map_side(
     side_rot: &Rotation3<f32>,
     roughness: f32,
     sample_size: usize,
+    e_limit: u8,
 ) -> Result<Vec<u8>, ImageError> {
     let mut buf: Vec<u8> = Vec::new();
     let encoder = HdrEncoder::new(&mut buf);
@@ -214,6 +225,7 @@ pub fn gen_specular_map_side(
                 dir.z,
                 roughness,
                 sample_size,
+                e_limit,
             )
         })
         .collect::<Vec<Rgb<f32>>>();
@@ -221,4 +233,24 @@ pub fn gen_specular_map_side(
     return encoder
         .encode(pixels.as_slice(), map_size, map_size)
         .map(|_| buf);
+}
+
+pub fn read_hdr(env_map_buffer: &[u8]) -> ImageResult<(Vec<Rgbe8Pixel>, u32, u32)> {
+    let buf_reader = BufReader::new(env_map_buffer);
+    let decoder = HdrDecoder::new(buf_reader);
+
+    return decoder.and_then(|x| {
+        let meta = x.metadata();
+        x.read_image_native()
+            .map(|pxls| (pxls, meta.width, meta.height))
+    });
+}
+
+pub fn exponent_limit(env_map_buffer: &[u8]) -> Result<u8, ImageError> {
+    return read_hdr(env_map_buffer).map(|(pixels, w, h)| {
+        let mut chan = pixels.iter().map(|x| x.e).collect::<Vec<u8>>();
+        chan.sort();
+        let limit_idx = chan.len() / 100 * 95;
+        chan[limit_idx]
+    });
 }

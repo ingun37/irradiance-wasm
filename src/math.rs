@@ -1,9 +1,8 @@
-use image::codecs::hdr::{HdrDecoder, HdrEncoder, Rgbe8Pixel};
-use image::{ImageError, ImageResult, Rgb};
+use image::codecs::hdr::{HdrDecoder, HdrEncoder};
+use image::{ImageError, ImageResult, Rgb, Rgb32FImage};
 use nalgebra::{Rotation3, Vector2, Vector3};
 use std::f32::consts::PI;
 use std::io::BufReader;
-
 pub mod fibonacci_hemi_sphere;
 
 pub fn make_6_rotations() -> [Rotation3<f32>; 6] {
@@ -45,32 +44,26 @@ fn sample_vec(map_size: usize, side_rot: &Rotation3<f32>, ij: usize) -> Vector3<
     side_rot * _dir
 }
 
-pub fn sample_equirect(
-    img: &Vec<Rgbe8Pixel>,
-    width: usize,
-    height: usize,
-    x: f32,
-    y: f32,
-    z: f32,
-) -> Rgbe8Pixel {
+pub fn sample_equirect(hdr: &Rgb32FImage, x: f32, y: f32, z: f32) -> Rgb<f32> {
     let tau = PI * 2f32;
     let polar = (x.atan2(z) + PI).rem_euclid(tau);
     let azimuth = Vector2::new(x, z).magnitude().atan2(y).rem_euclid(tau);
     let u = polar / tau;
     let v = azimuth / PI;
-    let i = (u * (width as f32)) as usize;
-    let j = (v * (height as f32)) as usize;
-    return img[width * j + i];
+    let (width, height) = hdr.dimensions();
+    let i = (u * (width as f32)) as u32;
+    let j = (v * (height as f32)) as u32;
+    return *hdr.get_pixel(i, j);
+    // return img[width * j + i];
 }
+
 static UP: Vector3<f32> = Vector3::new(0f32, 1f32, 0f32);
 pub fn gen_side(
-    env: &Vec<Rgbe8Pixel>,
-    env_width: usize,
-    env_height: usize,
+    hdr: &Rgb32FImage,
     map_size: usize,
     side_rot: &Rotation3<f32>,
     sample_size: u32,
-    e_limit: u8,
+    // e_limit: u8,
 ) -> Result<Vec<u8>, ImageError> {
     let mut buf: Vec<u8> = Vec::new();
     let encoder = HdrEncoder::new(&mut buf);
@@ -87,11 +80,7 @@ pub fn gen_side(
                     (((*rot) * v), w)
                 })
                 .for_each(|(v, w)| {
-                    let rgbe = sample_equirect(env, env_width, env_height, v.x, v.y, v.z);
-                    if e_limit < rgbe.e {
-                        return;
-                    }
-                    let rgb = rgbe.to_hdr();
+                    let rgb = sample_equirect(hdr, v.x, v.y, v.z);
                     for i in 0..3 {
                         total_rgb[i] += rgb[i] * w;
                     }
@@ -163,15 +152,12 @@ pub fn the_step_2(n: &Vector3<f32>, l: &Vector3<f32>) -> Option<(Vector3<f32>, f
     }
 }
 pub fn sample_specular(
-    envmap: &Vec<Rgbe8Pixel>,
-    width: usize,
-    height: usize,
+    hdr_env: &Rgb32FImage,
     nx: f32,
     ny: f32,
     nz: f32,
     roughness: f32,
     sample_size: usize,
-    e_limit: u8,
 ) -> Rgb<f32> {
     let n = Vector3::new(nx, ny, nz).normalize();
     let mut total_weight = 0f32;
@@ -183,11 +169,7 @@ pub fn sample_specular(
         .map(|h| the_step(&n, &h))
         .flat_map(|l| the_step_2(&n, &l))
         .for_each(|(v, w)| {
-            let rgbe = sample_equirect(envmap, width, height, v.x, v.y, v.z);
-            if e_limit < rgbe.e {
-                return;
-            }
-            let rgb = rgbe.to_hdr();
+            let rgb = sample_equirect(hdr_env, v.x, v.y, v.z);
 
             for i in 0..3 {
                 total_rgb[i] += rgb[i] * w;
@@ -202,32 +184,17 @@ pub fn sample_specular(
 }
 
 pub fn gen_specular_map_side(
-    env: &Vec<Rgbe8Pixel>,
-    env_width: usize,
-    env_height: usize,
+    env: &Rgb32FImage,
     map_size: usize,
     side_rot: &Rotation3<f32>,
     roughness: f32,
     sample_size: usize,
-    e_limit: u8,
 ) -> Result<Vec<u8>, ImageError> {
     let mut buf: Vec<u8> = Vec::new();
     let encoder = HdrEncoder::new(&mut buf);
     let pixels = (0..map_size * map_size)
         .map(|ij| sample_vec(map_size, side_rot, ij))
-        .map(|dir| {
-            sample_specular(
-                env,
-                env_width,
-                env_height,
-                dir.x,
-                dir.y,
-                dir.z,
-                roughness,
-                sample_size,
-                e_limit,
-            )
-        })
+        .map(|dir| sample_specular(env, dir.x, dir.y, dir.z, roughness, sample_size))
         .collect::<Vec<Rgb<f32>>>();
 
     return encoder
@@ -235,22 +202,45 @@ pub fn gen_specular_map_side(
         .map(|_| buf);
 }
 
-pub fn read_rgbe_pixels(env_map_buffer: &[u8]) -> ImageResult<(Vec<Rgbe8Pixel>, u32, u32)> {
+fn custom_image_error() -> image::ImageError {
+    image::ImageError::from(std::io::Error::new(
+        std::io::ErrorKind::Other,
+        "some Image error",
+    ))
+}
+
+pub fn read_hdr_image(env_map_buffer: &[u8]) -> ImageResult<Rgb32FImage> {
     let buf_reader = BufReader::new(env_map_buffer);
     let decoder = HdrDecoder::new(buf_reader);
 
     return decoder.and_then(|x| {
         let meta = x.metadata();
         x.read_image_native()
-            .map(|pxls| (pxls, meta.width, meta.height))
+            .map(|rgbe_vec| {
+                rgbe_vec
+                    .iter()
+                    .map(|rgbe| rgbe.to_hdr())
+                    .flat_map(|rgb| rgb.0)
+                    .collect()
+            })
+            .and_then(|f32_vec| {
+                image::Rgb32FImage::from_vec(meta.width, meta.height, f32_vec)
+                    .ok_or(custom_image_error())
+            })
+        // .map(|img| blur(&img, PI))
+        // .map(image::DynamicImage::ImageRgb32F)
+        // .map(|x| x.blur(PI))
+        // .map(|f32_vec| {
+        //     let hh = image::Rgb32FImage::from_vec(meta.width, meta.height, f32_vec).map(image::DynamicImage::ImageRgb32F).map(|x| x.blur(PI));
+        // })
     });
 }
 
-pub fn exponent_limit(env_map_buffer: &[u8]) -> Result<u8, ImageError> {
-    return read_rgbe_pixels(env_map_buffer).map(|(pixels, w, h)| {
-        let mut chan = pixels.iter().map(|x| x.e).collect::<Vec<u8>>();
-        chan.sort();
-        let limit_idx = chan.len() / 100 * 95;
-        chan[limit_idx]
-    });
-}
+// pub fn exponent_limit(env_map_buffer: &[u8]) -> Result<u8, ImageError> {
+//     return read_rgbe_pixels(env_map_buffer).map(|(pixels, w, h)| {
+//         let mut chan = pixels.iter().map(|x| x.e).collect::<Vec<u8>>();
+//         chan.sort();
+//         let limit_idx = chan.len() / 100 * 95;
+//         chan[limit_idx]
+//     });
+// }

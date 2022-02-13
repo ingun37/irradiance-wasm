@@ -2,6 +2,8 @@ mod math;
 mod utils;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
+use image::codecs::hdr::HdrEncoder;
+use image::imageops::blur;
 use image::ImageError;
 use js_sys;
 use nalgebra::Vector3;
@@ -9,6 +11,7 @@ use std::borrow::Cow;
 use std::io::{Error, ErrorKind};
 use wasm_bindgen::prelude::*;
 use wgpu::util::DeviceExt;
+
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
 #[cfg(feature = "wee_alloc")]
@@ -145,31 +148,44 @@ fn map_err_to_image_error(e: JsValue) -> ImageError {
 }
 
 #[wasm_bindgen]
+pub fn debug_blur(env_map_buffer: &[u8], blur_sigma: f32) -> Result<Vec<u8>, JsValue> {
+    let mut buf: Vec<u8> = Vec::new();
+    let encoder = HdrEncoder::new(&mut buf);
+    // return encoder
+    //     .encode(pixels.as_slice(), map_size, map_size)
+    //     .map(|_| buf);
+    return math::read_hdr_image(env_map_buffer)
+        .map(|img| blur(&img, blur_sigma))
+        .map(|img| {
+            let rgb_vec: Vec<image::Rgb<f32>> = img.pixels().map(|x| *x).collect();
+            encoder.encode(
+                rgb_vec.as_slice(),
+                img.width() as usize,
+                img.height() as usize,
+            )
+        })
+        .map(|_| buf)
+        .map_err(map_err_to_jsvalue);
+}
+
+#[wasm_bindgen]
 pub fn irradiance(
     sample_size: u32,
     map_size: usize,
-    e_limit: u8,
     env_map_buffer: &[u8],
+    blur_sigma: f32,
     callback: &js_sys::Function,
 ) -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
 
     let mut idx = -1;
-    math::read_rgbe_pixels(env_map_buffer)
-        .and_then(|(pxls, w, h)| {
+    math::read_hdr_image(env_map_buffer)
+        .map(|img| blur(&img, blur_sigma))
+        .and_then(|img| {
             math::make_6_rotations()
                 .iter()
                 .map(|r| {
-                    math::gen_side(
-                        &pxls,
-                        w as usize,
-                        h as usize,
-                        map_size,
-                        r,
-                        sample_size,
-                        e_limit,
-                    )
-                    .and_then(|map| {
+                    math::gen_side(&img, map_size, r, sample_size).and_then(|map| {
                         let ptr = map.as_ptr();
                         let bytelen = map.len();
                         idx += 1;
@@ -194,13 +210,12 @@ pub fn specular(
     env_map_buffer: &[u8],
     callback: &js_sys::Function,
     mip_levels: u32,
-    e_limit: u8,
 ) -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
     let mut idx = -1;
 
-    math::read_rgbe_pixels(env_map_buffer)
-        .and_then(|(pxls, w, h)| {
+    math::read_hdr_image(env_map_buffer)
+        .and_then(|img| {
             (0..mip_levels)
                 .map(|mip| {
                     let mip_map_size = (0..mip).fold(map_size, |x, _| x / 2);
@@ -209,14 +224,11 @@ pub fn specular(
                         .iter()
                         .map(|r| {
                             math::gen_specular_map_side(
-                                &pxls,
-                                w as usize,
-                                h as usize,
+                                &img,
                                 mip_map_size,
                                 r,
                                 mip_roughness,
                                 sample_size,
-                                e_limit,
                             )
                             .and_then(|map| {
                                 idx += 1;

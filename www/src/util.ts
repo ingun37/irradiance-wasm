@@ -57,15 +57,15 @@ export function fetchSampleHDR() {
 
 export function generateDiffuseIrradianceMap(
   sampleSize: number,
-  eLimit: number
+  blurSigma: number
 ) {
   return fetchSampleHDR().then((ab) => {
     let buffers: Uint8Array[] = [];
     wasm.irradiance(
       sampleSize,
       64,
-      eLimit,
       ab,
+      blurSigma,
       (idx: bigint, offset: number, size: bigint) => {
         const hdrBuf = new Uint8Array(
           wasm_bg.memory.buffer,
@@ -84,8 +84,7 @@ export function generateDiffuseIrradianceMap(
 export async function generatePreFilteredSpecularMap(
   sampleCount: number,
   mapSize: number,
-  mipLevels: number,
-  eLimit: number
+  mipLevels: number
 ) {
   return fetchSampleHDR().then((ab) => {
     let buffers: Uint8Array[] = [];
@@ -104,8 +103,7 @@ export async function generatePreFilteredSpecularMap(
         cp.set(hdrBuf);
         buffers.push(cp);
       },
-      mipLevels,
-      eLimit
+      mipLevels
     );
     return buffers;
   });
@@ -119,4 +117,10 @@ export function webGpuTest() {
 
 export function tup<A, B>(a: A, b: B): [A, B] {
   return [a, b];
+}
+
+export function downloadBlurredHDR(sigma: number) {
+  fetchSampleHDR()
+    .then((ab) => wasm.debug_blur(ab, sigma))
+    .then((x) => downloadBlob(x, "blurred.hdr"));
 }

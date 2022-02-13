@@ -9,6 +9,7 @@ import { roughness } from "../consts";
 import { Button, Container, TextField, Typography } from "@mui/material";
 import {
   downloadBlob,
+  downloadBlurredHDR,
   generateDiffuseIrradianceMap,
   generatePreFilteredSpecularMap,
   webGpuTest,
@@ -35,16 +36,15 @@ export default function Everything() {
   const [specularSampleSize, setSpecularSampleSize] = useState(1000);
   const [specularMapSize, setSpecularMapSize] = useState(128);
   const [specularMipLevels, setSpecularMipLevels] = useState(6);
-  const [eLimit, setELimit] = useState(136);
+  const [blurSigma, setBlurSigma] = useState("3.14");
   return (
     <Stack spacing={2} alignItems="center">
       <Header />
       <TextField
         id="outlined-number"
-        label="e limit"
-        type="number"
-        value={eLimit}
-        onChange={(e) => setELimit(Number.parseInt(e.target.value))}
+        label="blur sigma"
+        value={blurSigma}
+        onChange={(e) => setBlurSigma(e.target.value)}
       />
       <Stack direction="row" spacing={2}>
         <Item>
@@ -71,17 +71,18 @@ export default function Everything() {
             />
             <Button
               onClick={() => {
-                generateDiffuseIrradianceMap(diffuseSampleSize, eLimit).then(
-                  (buffers) => {
-                    setItems(
-                      buffers.reduce(
-                        (m, buffer, idx) =>
-                          m.set(`Environment_c0${idx}.png.hdr`, buffer),
-                        new Map()
-                      )
-                    );
-                  }
-                );
+                generateDiffuseIrradianceMap(
+                  diffuseSampleSize,
+                  Number.parseFloat(blurSigma)
+                ).then((buffers) => {
+                  setItems(
+                    buffers.reduce(
+                      (m, buffer, idx) =>
+                        m.set(`Environment_c0${idx}.png.hdr`, buffer),
+                      new Map()
+                    )
+                  );
+                });
               }}
             >
               generate
@@ -135,8 +136,7 @@ export default function Everything() {
                 generatePreFilteredSpecularMap(
                   specularSampleSize,
                   specularMapSize,
-                  specularMipLevels,
-                  eLimit
+                  specularMipLevels
                 ).then((buffers) => {
                   setItems(
                     buffers.reduce(
@@ -179,6 +179,13 @@ export default function Everything() {
       <Container>
         <OutlierDebug />
       </Container>
+      <Button
+        onClick={() => {
+          downloadBlurredHDR(Number.parseFloat(blurSigma));
+        }}
+      >
+        Download Blurred
+      </Button>
     </Stack>
   );
 }

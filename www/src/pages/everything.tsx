@@ -6,7 +6,7 @@ import Paper from "@mui/material/Paper";
 import PointsViewer from "./points-viewer";
 import * as wasm from "../../../pkg";
 import { roughness } from "../consts";
-import { Button, Container, TextField, Typography } from "@mui/material";
+import { Button, TextField, Typography } from "@mui/material";
 import {
   downloadBlob,
   downloadBlurredHDR,
@@ -18,8 +18,9 @@ import {
 import Header from "./header";
 import StatusTable from "./status-table";
 import * as fflate from "fflate";
-import PMREMDebug from "./pmrem-debug";
-import OutlierDebug from "./outlier-debug";
+// import PMREMDebug from "./pmrem-debug";
+// import OutlierDebug from "./outlier-debug";
+import InputImage from "./input-image";
 
 const Item = styled(Paper)(({ theme }) => ({
   ...theme.typography.body2,
@@ -37,15 +38,12 @@ export default function Everything() {
   const [specularMapSize, setSpecularMapSize] = useState(128);
   const [specularMipLevels, setSpecularMipLevels] = useState(8);
   const [blurSigma, setBlurSigma] = useState("0.1");
+  const [image, setImage] = useState<Uint8Array | null>(null);
   return (
     <Stack spacing={2} alignItems="center">
       <Header />
-      <TextField
-        id="outlined-number"
-        label="blur sigma"
-        value={blurSigma}
-        onChange={(e) => setBlurSigma(e.target.value)}
-      />
+      <InputImage onFile={setImage} />
+
       <Stack direction="row" spacing={2}>
         <Item>
           <Stack spacing={2} alignItems="center">
@@ -60,21 +58,35 @@ export default function Everything() {
                 uniqueId="fibo"
               />
             </Item>
-            <TextField
-              id="outlined-number"
-              label="sample size"
-              type="number"
-              value={diffuseSampleSize}
-              onChange={(e) =>
-                setDiffuseSampleSize(Number.parseInt(e.target.value))
-              }
-            />
+            <Stack direction="row" spacing={2}>
+              <TextField
+                style={{ width: 120 }}
+                id="outlined-number"
+                label="sample size"
+                type="number"
+                value={diffuseSampleSize}
+                onChange={(e) =>
+                  setDiffuseSampleSize(Number.parseInt(e.target.value))
+                }
+              />
+              <TextField
+                style={{ width: 120 }}
+                id="outlined-number"
+                label="blur sigma"
+                value={blurSigma}
+                onChange={(e) => setBlurSigma(e.target.value)}
+              />
+            </Stack>
+
             <Button
+              disabled={image === null}
               onClick={() => {
-                generateDiffuseIrradianceMap(
-                  diffuseSampleSize,
-                  Number.parseFloat(blurSigma)
-                ).then((buffers) => {
+                if (image) {
+                  const buffers = generateDiffuseIrradianceMap(
+                    image,
+                    diffuseSampleSize,
+                    Number.parseFloat(blurSigma)
+                  );
                   setItems(
                     buffers.reduce(
                       (m, buffer, idx) =>
@@ -82,7 +94,7 @@ export default function Everything() {
                       new Map()
                     )
                   );
-                });
+                }
               }}
             >
               generate
@@ -132,25 +144,28 @@ export default function Everything() {
               />
             </Stack>
             <Button
+              disabled={image === null}
               onClick={() => {
-                generatePreFilteredSpecularMap(
-                  specularSampleSize,
-                  specularMapSize,
-                  specularMipLevels
-                ).then((buffers) => {
-                  setItems(
-                    buffers.reduce(
-                      (m, buffer, idx) =>
-                        m.set(
-                          `Environment_m0${Math.floor(idx / 6)}_c0${
-                            idx % 6
-                          }.png.hdr`,
-                          buffer
-                        ),
-                      new Map()
-                    )
-                  );
-                });
+                if (image)
+                  generatePreFilteredSpecularMap(
+                    image,
+                    specularSampleSize,
+                    specularMapSize,
+                    specularMipLevels
+                  ).then((buffers) => {
+                    setItems(
+                      buffers.reduce(
+                        (m, buffer, idx) =>
+                          m.set(
+                            `Environment_m0${Math.floor(idx / 6)}_c0${
+                              idx % 6
+                            }.png.hdr`,
+                            buffer
+                          ),
+                        new Map()
+                      )
+                    );
+                  });
               }}
             >
               generate
@@ -159,33 +174,37 @@ export default function Everything() {
         </Item>
       </Stack>
       {/*<VisualDebug />*/}
-      <Button
-        onClick={() => {
-          let z: any = {};
-          items.forEach((buffer, name) => {
-            z[name] = buffer;
-          });
-          const zipped = fflate.zipSync(z);
-          downloadBlob(zipped, "environment-maps.zip");
-        }}
-      >
-        Download All
-      </Button>
+      <Stack spacing={2} direction="row">
+        <Button
+          onClick={() => {
+            let z: any = {};
+            items.forEach((buffer, name) => {
+              z[name] = buffer;
+            });
+            const zipped = fflate.zipSync(z);
+            downloadBlob(zipped, "environment-maps.zip");
+          }}
+        >
+          Download All
+        </Button>
+        <Button
+          disabled={image === null}
+          onClick={() => {
+            if (image) downloadBlurredHDR(image, Number.parseFloat(blurSigma));
+          }}
+        >
+          Download Blurred
+        </Button>
+        <Button onClick={webGpuTest}>WebGPU test</Button>
+      </Stack>
+
       <StatusTable names={Array.from(items.keys())} />
-      <Button onClick={webGpuTest}>WebGPU test</Button>
-      <Container>
-        <PMREMDebug />
-      </Container>
-      <Container>
-        <OutlierDebug />
-      </Container>
-      <Button
-        onClick={() => {
-          downloadBlurredHDR(Number.parseFloat(blurSigma));
-        }}
-      >
-        Download Blurred
-      </Button>
+      {/*<Container>*/}
+      {/*  <PMREMDebug />*/}
+      {/*</Container>*/}
+      {/*<Container>*/}
+      {/*  <OutlierDebug />*/}
+      {/*</Container>*/}
     </Stack>
   );
 }

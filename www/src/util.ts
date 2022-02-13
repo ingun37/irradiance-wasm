@@ -49,64 +49,58 @@ export function makeIndicator() {
   return group;
 }
 
-export function fetchSampleHDR() {
-  return fetch("./venetian_crossroads_1k.hdr")
-    .then((x) => x.arrayBuffer())
-    .then((x) => new Uint8Array(x));
-}
+//
 
 export function generateDiffuseIrradianceMap(
+  image: Uint8Array,
   sampleSize: number,
   blurSigma: number
 ) {
-  return fetchSampleHDR().then((ab) => {
-    let buffers: Uint8Array[] = [];
-    wasm.irradiance(
-      sampleSize,
-      64,
-      ab,
-      blurSigma,
-      (idx: bigint, offset: number, size: bigint) => {
-        const hdrBuf = new Uint8Array(
-          wasm_bg.memory.buffer,
-          offset,
-          Number(size)
-        );
-        const cp = new Uint8Array(new ArrayBuffer(Number(size)));
-        cp.set(hdrBuf);
-        buffers.push(cp);
-      }
-    );
-    return buffers;
-  });
+  let buffers: Uint8Array[] = [];
+  wasm.irradiance(
+    sampleSize,
+    64,
+    image,
+    blurSigma,
+    (idx: bigint, offset: number, size: bigint) => {
+      const hdrBuf = new Uint8Array(
+        wasm_bg.memory.buffer,
+        offset,
+        Number(size)
+      );
+      const cp = new Uint8Array(new ArrayBuffer(Number(size)));
+      cp.set(hdrBuf);
+      buffers.push(cp);
+    }
+  );
+  return buffers;
 }
 
 export async function generatePreFilteredSpecularMap(
+  image: Uint8Array,
   sampleCount: number,
   mapSize: number,
   mipLevels: number
 ) {
-  return fetchSampleHDR().then((ab) => {
-    let buffers: Uint8Array[] = [];
+  let buffers: Uint8Array[] = [];
 
-    wasm.specular(
-      sampleCount,
-      mapSize,
-      ab,
-      (idx: bigint, offset: number, size: bigint) => {
-        const hdrBuf = new Uint8Array(
-          wasm_bg.memory.buffer,
-          offset,
-          Number(size)
-        );
-        const cp = new Uint8Array(new ArrayBuffer(Number(size)));
-        cp.set(hdrBuf);
-        buffers.push(cp);
-      },
-      mipLevels
-    );
-    return buffers;
-  });
+  wasm.specular(
+    sampleCount,
+    mapSize,
+    image,
+    (idx: bigint, offset: number, size: bigint) => {
+      const hdrBuf = new Uint8Array(
+        wasm_bg.memory.buffer,
+        offset,
+        Number(size)
+      );
+      const cp = new Uint8Array(new ArrayBuffer(Number(size)));
+      cp.set(hdrBuf);
+      buffers.push(cp);
+    },
+    mipLevels
+  );
+  return buffers;
 }
 
 export function webGpuTest() {
@@ -119,8 +113,6 @@ export function tup<A, B>(a: A, b: B): [A, B] {
   return [a, b];
 }
 
-export function downloadBlurredHDR(sigma: number) {
-  fetchSampleHDR()
-    .then((ab) => wasm.debug_blur(ab, sigma))
-    .then((x) => downloadBlob(x, "blurred.hdr"));
+export function downloadBlurredHDR(image: Uint8Array, sigma: number) {
+  downloadBlob(wasm.debug_blur(image, sigma), "blurred.hdr");
 }

@@ -235,7 +235,7 @@ pub fn gen_specular_map_side(
         .map(|_| buf);
 }
 
-pub fn read_hdr(env_map_buffer: &[u8]) -> ImageResult<(Vec<Rgbe8Pixel>, u32, u32)> {
+pub fn read_rgbe_pixels(env_map_buffer: &[u8]) -> ImageResult<(Vec<Rgbe8Pixel>, u32, u32)> {
     let buf_reader = BufReader::new(env_map_buffer);
     let decoder = HdrDecoder::new(buf_reader);
 
@@ -247,7 +247,7 @@ pub fn read_hdr(env_map_buffer: &[u8]) -> ImageResult<(Vec<Rgbe8Pixel>, u32, u32
 }
 
 pub fn exponent_limit(env_map_buffer: &[u8]) -> Result<u8, ImageError> {
-    return read_hdr(env_map_buffer).map(|(pixels, w, h)| {
+    return read_rgbe_pixels(env_map_buffer).map(|(pixels, w, h)| {
         let mut chan = pixels.iter().map(|x| x.e).collect::<Vec<u8>>();
         chan.sort();
         let limit_idx = chan.len() / 100 * 95;

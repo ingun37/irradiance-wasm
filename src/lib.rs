@@ -155,7 +155,7 @@ pub fn irradiance(
     console_error_panic_hook::set_once();
 
     let mut idx = -1;
-    math::read_hdr(env_map_buffer)
+    math::read_rgbe_pixels(env_map_buffer)
         .and_then(|(pxls, w, h)| {
             math::make_6_rotations()
                 .iter()
@@ -199,7 +199,7 @@ pub fn specular(
     console_error_panic_hook::set_once();
     let mut idx = -1;
 
-    math::read_hdr(env_map_buffer)
+    math::read_rgbe_pixels(env_map_buffer)
         .and_then(|(pxls, w, h)| {
             (0..mip_levels)
                 .map(|mip| {

@@ -32,11 +32,11 @@ const Item = styled(Paper)(({ theme }) => ({
 
 export default function Everything() {
   const [items, setItems] = useState<Map<string, Uint8Array>>(new Map());
-  const [diffuseSampleSize, setDiffuseSampleSize] = useState(1000);
-  const [specularSampleSize, setSpecularSampleSize] = useState(1000);
+  const [diffuseSampleSize, setDiffuseSampleSize] = useState(7000);
+  const [specularSampleSize, setSpecularSampleSize] = useState(2000);
   const [specularMapSize, setSpecularMapSize] = useState(128);
-  const [specularMipLevels, setSpecularMipLevels] = useState(6);
-  const [blurSigma, setBlurSigma] = useState("3.14");
+  const [specularMipLevels, setSpecularMipLevels] = useState(8);
+  const [blurSigma, setBlurSigma] = useState("0.1");
   return (
     <Stack spacing={2} alignItems="center">
       <Header />

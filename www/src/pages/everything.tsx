@@ -21,6 +21,7 @@ import * as fflate from "fflate";
 // import PMREMDebug from "./pmrem-debug";
 // import OutlierDebug from "./outlier-debug";
 import InputImage from "./input-image";
+import Gldipage from "./gldipage";
 
 const Item = styled(Paper)(({ theme }) => ({
   ...theme.typography.body2,
@@ -205,6 +206,7 @@ export default function Everything() {
       {/*<Container>*/}
       {/*  <OutlierDebug />*/}
       {/*</Container>*/}
+      <Gldipage />
     </Stack>
   );
 }

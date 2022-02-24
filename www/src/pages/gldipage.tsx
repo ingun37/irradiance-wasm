@@ -1,6 +1,16 @@
 import * as React from "react";
 import { useEffect } from "react";
-import { PerspectiveCamera, Scene, WebGLRenderer } from "three";
+import {
+  CubeUVRefractionMapping,
+  DataTexture,
+  Mesh,
+  PerspectiveCamera,
+  PMREMGenerator,
+  Scene,
+  ShaderMaterial,
+  SphereBufferGeometry,
+  WebGLRenderer,
+} from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { makeIndicator } from "../util";
 import { equirectToCubemap, loadRGBE } from "../di";
@@ -21,30 +31,49 @@ export default function Gldipage() {
       0.1,
       1000
     );
+    scene.add(makeIndicator());
+    camera.translateZ(10);
+
     const renderer = new WebGLRenderer();
     renderer.setSize(consts.width, consts.height);
     document.getElementById(uniqueId).appendChild(renderer.domElement);
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.addEventListener("change", () => renderer.render(scene, camera));
-    loadRGBE()
-      .then(equirectToCubemap(128, renderer))
-      .then((rt) => {
-        scene.background = rt.texture;
-        // scene.add(new Mesh(new BoxGeometry(), new MeshPhongMaterial()));
-        // scene.add(new AmbientLight());
-        const l = LightProbeGenerator.fromCubeRenderTarget(renderer, rt);
-        scene.add(new LightProbeHelper(l, 1));
-        // scene.add(
-        //   new LightProbeHelper(
-        //     LightProbeGenerator.fromCubeTexture(cubeTexture),
-        //     1
-        //   )
-        // );
-        scene.add(makeIndicator());
-        camera.translateZ(10);
+    loadRGBE().then((equirect) => {
+      Promise.resolve(equirect)
+        .then(equirectToCubemap(128, renderer))
+        .then((rt) => {
+          scene.background = rt.texture;
 
-        requestAnimationFrame(() => renderer.render(scene, camera));
-      });
+          const l = LightProbeGenerator.fromCubeRenderTarget(renderer, rt);
+          scene.add(new LightProbeHelper(l, 1));
+
+          requestAnimationFrame(() => renderer.render(scene, camera));
+        });
+
+      Promise.resolve(equirect)
+        .then(equirectToPMREM(renderer))
+        .then((t) => {
+          t.mapping = CubeUVRefractionMapping;
+          const m = new Mesh(
+            new SphereBufferGeometry(),
+            new ShaderMaterial({
+              vertexShader: thevert,
+              fragmentShader: thefrag,
+              defines: {
+                ENVMAP_TYPE_CUBE_UV: true,
+              },
+              uniforms: {
+                env: {
+                  value: t,
+                },
+              },
+            })
+          );
+
+          scene.add(m);
+        });
+    });
   }, []);
   return (
     <div
@@ -55,4 +84,32 @@ export default function Gldipage() {
       }}
     />
   );
+}
+
+const thevert = `
+varying vec3 vOutputDirection;
+
+void main() {
+    vec4 world = modelMatrix * vec4( position, 1.0 );
+    gl_Position = projectionMatrix * viewMatrix * world;
+    vOutputDirection = position;
+}
+`;
+
+const thefrag = `
+#include <cube_uv_reflection_fragment>
+
+varying vec3 vOutputDirection;
+uniform sampler2D env;
+
+void main() {
+  gl_FragColor = textureCubeUV(env, vOutputDirection, 0.1);
+}
+`;
+function equirectToPMREM(renderer: WebGLRenderer) {
+  const pmrem = new PMREMGenerator(renderer);
+  return (equirect: DataTexture) => {
+    const rt = pmrem.fromEquirectangular(equirect);
+    return rt.texture;
+  };
 }

@@ -1,52 +1,53 @@
 import {
+  BackSide,
+  BoxBufferGeometry,
+  CubeCamera,
+  CubeTexture,
   DataTexture,
   Mesh,
-  OrthographicCamera,
-  PlaneBufferGeometry,
   Scene,
   ShaderMaterial,
+  WebGLCubeRenderTarget,
   WebGLRenderer,
-  WebGLRenderTarget,
 } from "three";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader";
 
-function loadRGBE() {
+export function loadRGBE() {
   return new Promise<DataTexture>((done) => {
     new RGBELoader().load("venetian_crossroads_1k.hdr", done);
   });
 }
-export function compileDiffuseIrradianceTexture(
-  width: number,
-  height: number,
-  renderer: WebGLRenderer
-) {
-  const camera = new OrthographicCamera(-1, 1, 1, -1);
-  camera.translateZ(10);
-  camera.lookAt(0, 0, 0);
 
+export function equirectToCubemap(size: number, renderer: WebGLRenderer) {
   const vcode = fetch("/di_vert.glsl").then((x) => x.text());
   const fcode = fetch("/di_frag.glsl").then((x) => x.text());
-  return Promise.all([vcode, fcode]).then(([vertexShader, fragmentShader]) => {
-    return loadRGBE().then((rgbe) => {
+  return (equirect: DataTexture) =>
+    Promise.all([vcode, fcode]).then(([vertexShader, fragmentShader]) => {
       const m = new ShaderMaterial({
         vertexShader,
         fragmentShader,
         uniforms: {
-          env: { value: rgbe },
+          env: { value: equirect },
         },
+        side: BackSide,
       });
 
-      const g = new PlaneBufferGeometry(2, 2);
+      const g = new BoxBufferGeometry();
       const mesh = new Mesh(g, m);
+      // mesh.rotateY(Math.PI);
+      // mesh.translateZ(1);
       const s = new Scene();
       s.add(mesh);
-      const rt = new WebGLRenderTarget(width, height, {});
-      const prevRT = renderer.getRenderTarget();
-      renderer.setRenderTarget(rt);
-      renderer.render(s, camera);
-      renderer.setRenderTarget(prevRT);
+      const rt = new WebGLCubeRenderTarget(size, { generateMipmaps: false });
+      const camera = new CubeCamera(0.1, 100, rt);
+      s.add(camera);
+      return new Promise<CubeTexture>((done) => {
+        requestAnimationFrame(() => {
+          camera.update(renderer, s);
+          // renderer.render(s, camera);
 
-      return rt.texture;
+          done(rt.texture);
+        });
+      });
     });
-  });
 }

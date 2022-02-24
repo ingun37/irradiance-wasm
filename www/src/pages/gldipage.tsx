@@ -2,18 +2,16 @@ import * as React from "react";
 import { useEffect } from "react";
 import {
   AmbientLight,
-  Color,
-  DirectionalLight,
+  BoxGeometry,
   Mesh,
   MeshPhongMaterial,
   PerspectiveCamera,
-  PlaneBufferGeometry,
   Scene,
   WebGLRenderer,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import { compileDiffuseIrradianceTexture } from "../di";
 import { makeIndicator } from "../util";
+import { equirectToCubemap, loadRGBE } from "../di";
 const uniqueId = "gldipage";
 const consts = {
   height: 512,
@@ -33,21 +31,15 @@ export default function Gldipage() {
     document.getElementById(uniqueId).appendChild(renderer.domElement);
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.addEventListener("change", () => renderer.render(scene, camera));
-    compileDiffuseIrradianceTexture(128, 128, renderer)
-      .then((map) => {
-        const m = new MeshPhongMaterial({
-          // color: new Color(1, 0, 0),
-          map,
-        });
-        const g = new PlaneBufferGeometry();
-        return new Mesh(g, m);
-      })
-      .then((mesh) => {
-        scene.add(mesh);
-        scene.add(new DirectionalLight());
+    loadRGBE()
+      .then(equirectToCubemap(128, renderer))
+      .then((cubeTexture) => {
+        scene.background = cubeTexture;
+        scene.add(new Mesh(new BoxGeometry(), new MeshPhongMaterial()));
         scene.add(new AmbientLight());
         scene.add(makeIndicator());
         camera.translateZ(10);
+
         requestAnimationFrame(() => renderer.render(scene, camera));
       });
   }, []);

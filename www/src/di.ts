@@ -2,7 +2,6 @@ import {
   BackSide,
   BoxBufferGeometry,
   CubeCamera,
-  CubeTexture,
   DataTexture,
   Mesh,
   Scene,
@@ -41,12 +40,12 @@ export function equirectToCubemap(size: number, renderer: WebGLRenderer) {
       const rt = new WebGLCubeRenderTarget(size, { generateMipmaps: false });
       const camera = new CubeCamera(0.1, 100, rt);
       s.add(camera);
-      return new Promise<CubeTexture>((done) => {
+      return new Promise<WebGLCubeRenderTarget>((done) => {
         requestAnimationFrame(() => {
           camera.update(renderer, s);
           // renderer.render(s, camera);
 
-          done(rt.texture);
+          done(rt);
         });
       });
     });

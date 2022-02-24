@@ -1,17 +1,12 @@
 import * as React from "react";
 import { useEffect } from "react";
-import {
-  AmbientLight,
-  BoxGeometry,
-  Mesh,
-  MeshPhongMaterial,
-  PerspectiveCamera,
-  Scene,
-  WebGLRenderer,
-} from "three";
+import { PerspectiveCamera, Scene, WebGLRenderer } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { makeIndicator } from "../util";
 import { equirectToCubemap, loadRGBE } from "../di";
+import { LightProbeHelper } from "three/examples/jsm/helpers/LightProbeHelper";
+import { LightProbeGenerator } from "three/examples/jsm/lights/LightProbeGenerator";
+
 const uniqueId = "gldipage";
 const consts = {
   height: 512,
@@ -33,10 +28,18 @@ export default function Gldipage() {
     controls.addEventListener("change", () => renderer.render(scene, camera));
     loadRGBE()
       .then(equirectToCubemap(128, renderer))
-      .then((cubeTexture) => {
-        scene.background = cubeTexture;
-        scene.add(new Mesh(new BoxGeometry(), new MeshPhongMaterial()));
-        scene.add(new AmbientLight());
+      .then((rt) => {
+        scene.background = rt.texture;
+        // scene.add(new Mesh(new BoxGeometry(), new MeshPhongMaterial()));
+        // scene.add(new AmbientLight());
+        const l = LightProbeGenerator.fromCubeRenderTarget(renderer, rt);
+        scene.add(new LightProbeHelper(l, 1));
+        // scene.add(
+        //   new LightProbeHelper(
+        //     LightProbeGenerator.fromCubeTexture(cubeTexture),
+        //     1
+        //   )
+        // );
         scene.add(makeIndicator());
         camera.translateZ(10);
 

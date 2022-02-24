@@ -88,5 +88,7 @@ export function pmrem(width: number, height: number, domID: string) {
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.minDistance = 50;
   controls.maxDistance = 300;
-  controls.addEventListener("change", render);
+  controls.addEventListener("change", () => {
+    requestAnimationFrame(render);
+  });
 }

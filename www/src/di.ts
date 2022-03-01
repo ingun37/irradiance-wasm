@@ -22,6 +22,7 @@ export function equirectToCubemap(size: number, renderer: WebGLRenderer) {
   const fcode = fetch("/di_frag.glsl").then((x) => x.text());
   return (equirect: DataTexture) =>
     Promise.all([vcode, fcode]).then(([vertexShader, fragmentShader]) => {
+      console.log(equirect);
       const m = new ShaderMaterial({
         vertexShader,
         fragmentShader,

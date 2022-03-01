@@ -2,6 +2,7 @@ import * as React from "react";
 import { useEffect } from "react";
 import {
   DataTexture,
+  LightProbe,
   Mesh,
   PerspectiveCamera,
   PMREMGenerator,
@@ -14,7 +15,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { makeIndicator } from "../util";
 import { equirectToCubemap, loadRGBE } from "../di";
 import { LightProbeHelper } from "three/examples/jsm/helpers/LightProbeHelper";
-import { LightProbeGenerator } from "three/examples/jsm/lights/LightProbeGenerator";
+import { LPG } from "../LightProbeGenerator";
 
 const uniqueId = "gldipage";
 const consts = {
@@ -40,43 +41,55 @@ export default function Gldipage() {
     controls.addEventListener("change", () =>
       requestAnimationFrame(() => renderer.render(scene, camera))
     );
+    const withLightProbe = (l: LightProbe) => {
+      const h = new LightProbeHelper(l, 1);
+      scene.add(h);
+
+      requestAnimationFrame(() => renderer.render(scene, camera));
+    };
     loadRGBE().then((equirect) => {
-      Promise.resolve(equirect)
-        .then(equirectToCubemap(128, renderer))
-        .then((rt) => {
-          scene.background = rt.texture;
-
-          const l = LightProbeGenerator.fromCubeRenderTarget(renderer, rt);
-          const h = new LightProbeHelper(l, 1);
-          scene.add(h);
-
-          requestAnimationFrame(() => renderer.render(scene, camera));
-        });
-
-      Promise.resolve(equirect)
-        .then(equirectToPMREM(renderer))
-        .then((t) => {
-          // t.mapping = CubeUVRefractionMapping;
-          const m = new Mesh(
-            new SphereBufferGeometry(),
-            new ShaderMaterial({
-              vertexShader: thevert,
-              fragmentShader: thefrag,
-              defines: {
-                ENVMAP_TYPE_CUBE_UV: true,
-              },
-              uniforms: {
-                env: {
-                  value: t,
-                },
-              },
-            })
-          );
-
-          m.translateX(3);
-
-          scene.add(m);
-        });
+      equirectToCubemap(
+        128,
+        renderer
+      )(equirect).then((rt) => {
+        scene.background = rt.texture;
+      });
+      withLightProbe(LPG.fromEquirect(equirect));
+      // Promise.resolve(equirect)
+      //   .then(equirectToCubemap(128, renderer))
+      //   .then((rt) => {
+      //     scene.background = rt.texture;
+      //
+      //     withLightProbe(
+      //       LightProbeGenerator.fromCubeRenderTarget(renderer, rt)
+      //     );
+      //   });
+      //
+      //
+      // Promise.resolve(equirect)
+      //   .then(equirectToPMREM(renderer))
+      //   .then((t) => {
+      //     // t.mapping = CubeUVRefractionMapping;
+      //     const m = new Mesh(
+      //       new SphereBufferGeometry(),
+      //       new ShaderMaterial({
+      //         vertexShader: thevert,
+      //         fragmentShader: thefrag,
+      //         defines: {
+      //           ENVMAP_TYPE_CUBE_UV: true,
+      //         },
+      //         uniforms: {
+      //           env: {
+      //             value: t,
+      //           },
+      //         },
+      //       })
+      //     );
+      //
+      //     m.translateX(3);
+      //
+      //     scene.add(m);
+      //   });
     });
   }, []);
   return (

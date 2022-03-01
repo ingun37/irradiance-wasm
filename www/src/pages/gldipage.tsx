@@ -1,7 +1,6 @@
 import * as React from "react";
 import { useEffect } from "react";
 import {
-  CubeUVRefractionMapping,
   DataTexture,
   Mesh,
   PerspectiveCamera,
@@ -38,7 +37,9 @@ export default function Gldipage() {
     renderer.setSize(consts.width, consts.height);
     document.getElementById(uniqueId).appendChild(renderer.domElement);
     const controls = new OrbitControls(camera, renderer.domElement);
-    controls.addEventListener("change", () => renderer.render(scene, camera));
+    controls.addEventListener("change", () =>
+      requestAnimationFrame(() => renderer.render(scene, camera))
+    );
     loadRGBE().then((equirect) => {
       Promise.resolve(equirect)
         .then(equirectToCubemap(128, renderer))
@@ -46,7 +47,8 @@ export default function Gldipage() {
           scene.background = rt.texture;
 
           const l = LightProbeGenerator.fromCubeRenderTarget(renderer, rt);
-          scene.add(new LightProbeHelper(l, 1));
+          const h = new LightProbeHelper(l, 1);
+          scene.add(h);
 
           requestAnimationFrame(() => renderer.render(scene, camera));
         });
@@ -54,7 +56,7 @@ export default function Gldipage() {
       Promise.resolve(equirect)
         .then(equirectToPMREM(renderer))
         .then((t) => {
-          t.mapping = CubeUVRefractionMapping;
+          // t.mapping = CubeUVRefractionMapping;
           const m = new Mesh(
             new SphereBufferGeometry(),
             new ShaderMaterial({
@@ -70,6 +72,8 @@ export default function Gldipage() {
               },
             })
           );
+
+          m.translateX(3);
 
           scene.add(m);
         });

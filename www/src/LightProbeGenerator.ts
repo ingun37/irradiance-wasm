@@ -46,9 +46,12 @@ export class LPG {
 
       // accummuulate
       for (let j = 0; j < 9; j++) {
-        shCoefficients[j].x += shBasis[j] * color.r * weight;
-        shCoefficients[j].y += shBasis[j] * color.g * weight;
-        shCoefficients[j].z += shBasis[j] * color.b * weight;
+        shCoefficients[j].x +=
+          shBasis[j] * MathUtils.clamp(color.r, 0, 1000) * weight;
+        shCoefficients[j].y +=
+          shBasis[j] * MathUtils.clamp(color.g, 0, 1000) * weight;
+        shCoefficients[j].z +=
+          shBasis[j] * MathUtils.clamp(color.b, 0, 1000) * weight;
       }
     }
 

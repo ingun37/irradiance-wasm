@@ -6,7 +6,7 @@ import Paper from "@mui/material/Paper";
 import PointsViewer from "./points-viewer";
 import * as wasm from "../../../pkg";
 import { roughness } from "../consts";
-import { Button, TextField, Typography } from "@mui/material";
+import { Button, Container, TextField, Typography } from "@mui/material";
 import {
   downloadBlob,
   downloadBlurredHDR,
@@ -21,6 +21,7 @@ import * as fflate from "fflate";
 // import PMREMDebug from "./pmrem-debug";
 // import OutlierDebug from "./outlier-debug";
 import InputImage from "./input-image";
+import PMREMDebug from "./pmrem-debug";
 
 const Item = styled(Paper)(({ theme }) => ({
   ...theme.typography.body2,
@@ -199,9 +200,9 @@ export default function Everything() {
       </Stack>
 
       <StatusTable names={Array.from(items.keys())} />
-      {/*<Container>*/}
-      {/*  <PMREMDebug />*/}
-      {/*</Container>*/}
+      <Container>
+        <PMREMDebug />
+      </Container>
       {/*<Container>*/}
       {/*  <OutlierDebug />*/}
       {/*</Container>*/}

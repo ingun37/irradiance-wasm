@@ -22,6 +22,7 @@ import * as fflate from "fflate";
 // import OutlierDebug from "./outlier-debug";
 import InputImage from "./input-image";
 import PMREMDebug from "./pmrem-debug";
+import CreatePlanesDebug from "./create-planes-debug";
 
 const Item = styled(Paper)(({ theme }) => ({
   ...theme.typography.body2,
@@ -202,6 +203,9 @@ export default function Everything() {
       <StatusTable names={Array.from(items.keys())} />
       <Container>
         <PMREMDebug />
+      </Container>
+      <Container>
+        <CreatePlanesDebug />
       </Container>
       {/*<Container>*/}
       {/*  <OutlierDebug />*/}

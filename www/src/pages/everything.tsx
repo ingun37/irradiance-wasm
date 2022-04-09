@@ -22,7 +22,8 @@ import * as fflate from "fflate";
 // import OutlierDebug from "./outlier-debug";
 import InputImage from "./input-image";
 import PMREMDebug from "./pmrem-debug";
-import CreatePlanesDebug from "./create-planes-debug";
+import ThreeDebug from "./three-debug";
+import { pmremCubemap } from "../pmrem-cubemap";
 
 const Item = styled(Paper)(({ theme }) => ({
   ...theme.typography.body2,
@@ -204,8 +205,11 @@ export default function Everything() {
       <Container>
         <PMREMDebug />
       </Container>
+      {/*<Container>*/}
+      {/*  <CreatePlanesDebug />*/}
+      {/*</Container>*/}
       <Container>
-        <CreatePlanesDebug />
+        <ThreeDebug eff={pmremCubemap} />
       </Container>
       {/*<Container>*/}
       {/*  <OutlierDebug />*/}

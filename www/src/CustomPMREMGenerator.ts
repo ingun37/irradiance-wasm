@@ -13,6 +13,7 @@ import {
   CubeTexture,
   WebGLRenderTargetOptions,
   WebGLCubeRenderTarget,
+  CubeCamera,
 } from "three";
 
 import { BufferAttribute } from "three";
@@ -510,7 +511,7 @@ class PMREMCubeMapGenerator {
     // Number of standard deviations at which to cut off the discrete approximation.
     const STANDARD_DEVIATIONS = 3;
 
-    const blurMesh = new Mesh(this._lodPlanes[lodOut], blurMaterial);
+    const blurMesh = new Mesh(new BoxGeometry(), blurMaterial);
     const blurUniforms = blurMaterial.uniforms;
 
     const pixels = this._sizeLods[lodIn] - 1;
@@ -568,9 +569,13 @@ class PMREMCubeMapGenerator {
       (lodOut > _lodMax - LOD_MIN ? lodOut - _lodMax + LOD_MIN : 0);
     const y = 4 * (this._cubeSize - outputSize);
 
-    _setViewport(targetOut, x, y, 3 * outputSize, 2 * outputSize);
-    renderer.setRenderTarget(targetOut);
-    renderer.render(blurMesh, _flatCamera);
+    const camera = new CubeCamera(0.5, 1000, targetOut);
+    const scene = new Scene();
+    scene.add(blurMesh);
+    camera.update(renderer, scene);
+    // _setViewport(targetOut, x, y, 3 * outputSize, 2 * outputSize);
+    // renderer.setRenderTarget(targetOut);
+    // renderer.render(blurMesh, _flatCamera);
   }
 }
 
@@ -736,7 +741,7 @@ function _getBlurShader(lodMax: number) {
 				vec3 sampleDirection = vOutputDirection * cosTheta
 					+ cross( axis, vOutputDirection ) * sin( theta )
 					+ axis * dot( axis, vOutputDirection ) * ( 1.0 - cosTheta );
-                return textureCubeLodEXT(envMap, normalize(sampleDirection), mipInt);
+                return textureCubeLodEXT(envMap, normalize(sampleDirection), mipInt).rgb;
 				// return bilinearCubeUV( envMap, sampleDirection, mipInt );
 
 			}

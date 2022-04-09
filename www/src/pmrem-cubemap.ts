@@ -1,0 +1,85 @@
+import * as THREE from "three";
+import {
+  ACESFilmicToneMapping,
+  BoxGeometry,
+  Color,
+  Mesh,
+  MeshBasicMaterial,
+  MeshStandardMaterial,
+  PerspectiveCamera,
+  PMREMGenerator,
+  Scene,
+  ShaderMaterial,
+  TorusKnotGeometry,
+  WebGLRenderer,
+} from "three";
+// import { DebugEnvironment } from "three/examples/jsm/environments/DebugEnvironment";
+// import { HDRCubeTextureLoader } from "three/examples/jsm/loaders/HDRCubeTextureLoader";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader";
+import { PMREMCubeMapGenerator } from "./CustomPMREMGenerator";
+
+export function pmremCubemap(width: number, height: number, domID: string) {
+  const camera = new PerspectiveCamera(40, width / height, 1, 1000);
+  camera.position.set(0, 0, 10);
+  const scene = new Scene();
+  scene.background = new Color(0x000000);
+
+  const renderer = new WebGLRenderer();
+  document.getElementById(domID).appendChild(renderer.domElement);
+
+  renderer.physicallyCorrectLights = true;
+  renderer.toneMapping = ACESFilmicToneMapping;
+
+  const pmremGenerator = new PMREMCubeMapGenerator(renderer);
+
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(width, height);
+
+  const render = () => {
+    renderer.render(scene, camera);
+  };
+  new RGBELoader().load("venetian_crossroads_1k.hdr", (dataTexture) => {
+    // hdrCubeMap.magFilter = THREE.LinearFilter;
+    // hdrCubeMap.needsUpdate = true;
+
+    const renderTarget = pmremGenerator.fromEquirectangular(dataTexture);
+    // const cubeMap = hdrCubeMap;
+    const newEnvMap = renderTarget ? renderTarget.texture : null;
+
+    // console.log(renderTarget.texture.mipmaps);
+    const mat = new ShaderMaterial({
+      vertexShader: `
+                  varying vec3 vOutputDirection;
+
+      void main() {
+                  	vOutputDirection = position;
+
+      gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4( position, 1.0 );
+      }
+      `,
+      fragmentShader: `
+      	varying vec3 vOutputDirection;
+      	uniform samplerCube env;
+        void main() {
+          gl_FragColor = vec4( textureCubeLodEXT(env, normalize(vOutputDirection), 7.0));
+
+        }
+      `,
+      uniforms: {
+        env: { value: newEnvMap },
+      },
+    });
+    scene.add(new Mesh(new BoxGeometry(), mat));
+    // scene.background = cubeMap;
+    renderer.toneMappingExposure = 1;
+    render();
+  });
+
+  //renderer.toneMapping = ReinhardToneMapping;
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.minDistance = 1;
+  controls.maxDistance = 300;
+  controls.addEventListener("change", render);
+}

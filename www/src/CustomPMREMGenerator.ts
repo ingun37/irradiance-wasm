@@ -14,6 +14,7 @@ import {
   WebGLRenderTargetOptions,
   WebGLCubeRenderTarget,
   CubeCamera,
+  DoubleSide,
 } from "three";
 
 import { BufferAttribute } from "three";
@@ -126,23 +127,24 @@ class PMREMCubeMapGenerator {
    * is placed at the origin).
    */
   fromScene(scene: Scene, sigma = 0, near = 0.1, far = 100) {
-    _oldTarget = this._renderer.getRenderTarget();
-
-    this._setSize(256);
-
-    const cubeUVRenderTarget = this._allocateTargets();
-    cubeUVRenderTarget.depthBuffer = true;
-
-    this._sceneToCubeUV(scene, near, far, cubeUVRenderTarget);
-
-    if (sigma > 0) {
-      this._blur(cubeUVRenderTarget, 0, 0, sigma);
-    }
-
-    this._applyPMREM(cubeUVRenderTarget);
-    this._cleanup(cubeUVRenderTarget);
-
-    return cubeUVRenderTarget;
+    throw new Error("from scene is unimplemented");
+    // _oldTarget = this._renderer.getRenderTarget();
+    //
+    // this._setSize(256);
+    //
+    // const cubeUVRenderTarget = this._allocateTargets();
+    // cubeUVRenderTarget.depthBuffer = true;
+    //
+    // this._sceneToCubeUV(scene, near, far, cubeUVRenderTarget);
+    //
+    // if (sigma > 0) {
+    //   this._blur(cubeUVRenderTarget, 0, 0, sigma);
+    // }
+    //
+    // this._applyPMREM(cubeUVRenderTarget);
+    // this._cleanup(cubeUVRenderTarget);
+    //
+    // return cubeUVRenderTarget;
   }
 
   /**
@@ -429,7 +431,7 @@ class PMREMCubeMapGenerator {
     const autoClear = renderer.autoClear;
     renderer.autoClear = false;
     const mipmaps: CubeTexture[] = [];
-
+    let previous = cubeUVRenderTarget;
     for (let i = 1; i < this._lodPlanes.length; i++) {
       const sigma = Math.sqrt(
         this._sigmas[i] * this._sigmas[i] -
@@ -442,8 +444,9 @@ class PMREMCubeMapGenerator {
       const size = this._sizeLods[i];
       console.log("making cube rt for lod", i, "with size of", size);
       const rt = new WebGLCubeRenderTarget(size, _renderTargetParams);
-      this._blur(rt, i - 1, i, sigma, poleAxis);
+      this._blur(previous, rt, i - 1, i, sigma, poleAxis);
       mipmaps.push(rt.texture);
+      previous = rt;
     }
 
     cubeUVRenderTarget.texture.mipmaps = mipmaps;
@@ -458,7 +461,8 @@ class PMREMCubeMapGenerator {
    * accurate at the poles, but still does a decent job.
    */
   _blur(
-    cubeUVRenderTarget: WebGLCubeRenderTarget,
+    previous: WebGLCubeRenderTarget,
+    current: WebGLCubeRenderTarget,
     lodIn: number,
     lodOut: number,
     sigma: number,
@@ -467,7 +471,7 @@ class PMREMCubeMapGenerator {
     const pingPongRenderTarget = this._pingPongRenderTarget;
 
     this._halfBlur(
-      cubeUVRenderTarget,
+      previous,
       // TODO: hull exception
       pingPongRenderTarget!,
       lodIn,
@@ -480,7 +484,7 @@ class PMREMCubeMapGenerator {
     this._halfBlur(
       // TODO: hull exception
       pingPongRenderTarget!,
-      cubeUVRenderTarget,
+      current,
       lodOut,
       lodOut,
       sigma,
@@ -569,7 +573,7 @@ class PMREMCubeMapGenerator {
       (lodOut > _lodMax - LOD_MIN ? lodOut - _lodMax + LOD_MIN : 0);
     const y = 4 * (this._cubeSize - outputSize);
 
-    const camera = new CubeCamera(0.5, 1000, targetOut);
+    const camera = new CubeCamera(0.1, 1000, targetOut);
     const scene = new Scene();
     scene.add(blurMesh);
     camera.update(renderer, scene);
@@ -781,6 +785,7 @@ function _getBlurShader(lodMax: number) {
     blending: NoBlending,
     depthTest: false,
     depthWrite: false,
+    side: DoubleSide,
   });
 
   return shaderMaterial;

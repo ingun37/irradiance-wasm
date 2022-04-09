@@ -15,6 +15,7 @@ import {
   WebGLCubeRenderTarget,
   CubeCamera,
   DoubleSide,
+  DataTexture,
 } from "three";
 
 import { BufferAttribute } from "three";
@@ -445,7 +446,7 @@ class PMREMCubeMapGenerator {
       console.log("making cube rt for lod", i, "with size of", size);
       const rt = new WebGLCubeRenderTarget(size, _renderTargetParams);
       this._blur(previous, rt, i - 1, i, sigma, poleAxis);
-      mipmaps.push(rt.texture);
+      mipmaps.push(makeDataCubeTexture(renderer, size, rt));
       previous = rt;
     }
 
@@ -923,3 +924,49 @@ function _getCommonVertexShader() {
 }
 
 export { PMREMCubeMapGenerator };
+
+export function makeDataCubeTexture(
+  renderer: WebGLRenderer,
+  size: number,
+  rt: WebGLCubeRenderTarget
+) {
+  const { format, type, magFilter, minFilter, encoding } = _renderTargetParams;
+  const cubeImages = [0, 1, 2, 3, 4, 5].map((face) => {
+    const buf = new Uint16Array(size * size * 4);
+    renderer.readRenderTargetPixels(rt, 0, 0, size, size, buf, face);
+    // return buf;
+    // console.log(buf);
+    const dt = new DataTexture(
+      buf,
+      size,
+      size,
+      format,
+      type,
+      undefined,
+      undefined,
+      undefined,
+      magFilter,
+      undefined,
+      undefined,
+      encoding
+    );
+    dt.generateMipmaps = false;
+    return dt;
+  });
+  const ct = new CubeTexture(
+    cubeImages,
+    undefined,
+    undefined,
+    undefined,
+    magFilter,
+    minFilter,
+    format,
+    type,
+    undefined,
+    encoding
+  );
+  ct.needsUpdate = true;
+
+  ct.generateMipmaps = false;
+  return ct;
+}

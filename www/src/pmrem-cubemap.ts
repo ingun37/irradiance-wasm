@@ -23,7 +23,7 @@ export function pmremCubemap(width: number, height: number, domID: string) {
   const camera = new PerspectiveCamera(40, width / height, 1, 1000);
   camera.position.set(0, 0, 10);
   const scene = new Scene();
-  scene.background = new Color(0x000000);
+  scene.background = new Color(0xf00000);
 
   const renderer = new WebGLRenderer();
   document.getElementById(domID).appendChild(renderer.domElement);

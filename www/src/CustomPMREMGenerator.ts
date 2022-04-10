@@ -62,7 +62,7 @@ const _axisDirections = [
 const _renderTargetParams: WebGLRenderTargetOptions = {
   magFilter: LinearFilter,
   // minFilter: LinearFilter,
-  minFilter: LinearMipmapLinearFilter,
+  // minFilter: LinearMipmapLinearFilter,
   generateMipmaps: false,
   type: HalfFloatType,
   format: RGBAFormat,
@@ -452,6 +452,7 @@ class PMREMCubeMapGenerator {
       this._cubeSize,
       cubeUVRenderTarget
     );
+    this.dataCubeTexture.minFilter = LinearMipmapLinearFilter;
     this.dataCubeTexture.mipmaps = mipmaps;
     this.dataCubeTexture.needsUpdate = true;
     renderer.autoClear = autoClear;

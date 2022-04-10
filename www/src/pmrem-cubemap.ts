@@ -37,7 +37,7 @@ export function pmremCubemap(width: number, height: number, domID: string) {
   renderer.setSize(width, height);
 
   const render = () => {
-    renderer.render(scene, camera);
+    requestAnimationFrame(() => renderer.render(scene, camera));
   };
   new RGBELoader().load("venetian_crossroads_1k.hdr", (dataTexture) => {
     // hdrCubeMap.magFilter = THREE.LinearFilter;

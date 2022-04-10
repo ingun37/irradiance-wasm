@@ -45,7 +45,7 @@ export function pmremCubemap(width: number, height: number, domID: string) {
 
     const renderTarget = pmremGenerator.fromEquirectangular(dataTexture);
     // const cubeMap = hdrCubeMap;
-    const newEnvMap = renderTarget ? renderTarget.texture : null;
+    const newEnvMap = renderTarget ? pmremGenerator.dataCubeTexture : null;
 
     // console.log(renderTarget.texture.mipmaps);
     const mat = new ShaderMaterial({
@@ -67,7 +67,7 @@ export function pmremCubemap(width: number, height: number, domID: string) {
         }
       `,
       uniforms: {
-        env: { value: newEnvMap.mipmaps[3] },
+        env: { value: newEnvMap },
       },
     });
     scene.add(new Mesh(new BoxGeometry(), mat));

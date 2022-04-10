@@ -16,6 +16,7 @@ import {
   CubeCamera,
   DoubleSide,
   DataTexture,
+  LinearMipmapLinearFilter,
 } from "three";
 
 import { BufferAttribute } from "three";
@@ -60,7 +61,7 @@ const _axisDirections = [
 
 const _renderTargetParams: WebGLRenderTargetOptions = {
   magFilter: LinearFilter,
-  minFilter: LinearFilter,
+  minFilter: LinearMipmapLinearFilter,
   generateMipmaps: false,
   type: HalfFloatType,
   format: RGBAFormat,
@@ -95,6 +96,7 @@ class PMREMCubeMapGenerator {
   private _cubemapMaterial: ShaderMaterial | null;
   private _equirectMaterial: ShaderMaterial | null;
   private _pingPongRenderTarget: WebGLCubeRenderTarget | null;
+  public dataCubeTexture: CubeTexture;
   constructor(renderer: WebGLRenderer) {
     this._renderer = renderer;
     this._pingPongRenderTarget = null;
@@ -442,7 +444,13 @@ class PMREMCubeMapGenerator {
       previous = rt;
     }
 
-    cubeUVRenderTarget.texture.mipmaps = mipmaps;
+    this.dataCubeTexture = makeDataCubeTexture(
+      renderer,
+      this._cubeSize,
+      cubeUVRenderTarget
+    );
+    this.dataCubeTexture.mipmaps = mipmaps;
+    this.dataCubeTexture.needsUpdate = true;
     renderer.autoClear = autoClear;
   }
 

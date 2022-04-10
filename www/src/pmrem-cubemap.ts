@@ -62,12 +62,12 @@ export function pmremCubemap(width: number, height: number, domID: string) {
       	varying vec3 vOutputDirection;
       	uniform samplerCube env;
         void main() {
-          gl_FragColor = vec4( textureCubeLodEXT(env, normalize(vOutputDirection), 7.0));
+          gl_FragColor = vec4( textureCubeLodEXT(env, normalize(vOutputDirection), 0.0));
 
         }
       `,
       uniforms: {
-        env: { value: newEnvMap },
+        env: { value: newEnvMap.mipmaps[3] },
       },
     });
     scene.add(new Mesh(new BoxGeometry(), mat));

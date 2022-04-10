@@ -31,14 +31,6 @@ import { MeshBasicMaterial } from "three";
 import { BoxGeometry } from "three";
 import { BackSide } from "three";
 
-const LOD_MIN = 4;
-
-// The standard deviations (radians) associated with the extra mips. These are
-// chosen to approximate a Trowbridge-Reitz distribution function times the
-// geometric shadowing function. These sigma values squared must match the
-// variance #defines in cube_uv_reflection_fragment.glsl.js.
-const EXTRA_LOD_SIGMA = [0.125, 0.215, 0.35, 0.446, 0.526, 0.582];
-
 // The maximum length of the blur for loop. Smaller sigmas will use fewer
 // samples and exit early, but not recompile the shader.
 const MAX_SAMPLES = 20;
@@ -562,17 +554,9 @@ class PMREMCubeMapGenerator {
       blurUniforms["poleAxis"].value = poleAxis;
     }
 
-    const { _lodMax } = this;
     blurUniforms["dTheta"].value = radiansPerPixel;
     // blurUniforms["mipInt"].value = _lodMax - lodIn;
     blurUniforms["mipInt"].value = lodIn;
-
-    const outputSize = this._sizeLods[lodOut];
-    const x =
-      3 *
-      outputSize *
-      (lodOut > _lodMax - LOD_MIN ? lodOut - _lodMax + LOD_MIN : 0);
-    const y = 4 * (this._cubeSize - outputSize);
 
     const camera = new CubeCamera(0.1, 1000, targetOut);
     const scene = new Scene();
@@ -591,16 +575,13 @@ export function _createPlanes(lodMax: number) {
 
   let lod = lodMax;
 
-  const totalLods = lodMax - LOD_MIN + 1 + EXTRA_LOD_SIGMA.length;
+  const totalLods = lodMax;
 
   for (let i = 0; i < totalLods; i++) {
     const sizeLod = Math.pow(2, lod);
     sizeLods.push(sizeLod);
     let sigma = 1.0 / sizeLod;
-
-    if (i > lodMax - LOD_MIN) {
-      sigma = EXTRA_LOD_SIGMA[i - lodMax + LOD_MIN - 1];
-    } else if (i === 0) {
+    if (i === 0) {
       sigma = 0;
     }
 
@@ -662,9 +643,7 @@ export function _createPlanes(lodMax: number) {
     );
     lodPlanes.push(planes);
 
-    if (lod > LOD_MIN) {
-      lod--;
-    }
+    lod--;
   }
 
   return { lodPlanes, sizeLods, sigmas };

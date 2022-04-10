@@ -62,7 +62,7 @@ export function pmremCubemap(width: number, height: number, domID: string) {
       	varying vec3 vOutputDirection;
       	uniform samplerCube env;
         void main() {
-          gl_FragColor = vec4( textureCubeLodEXT(env, normalize(vOutputDirection), 0.0));
+          gl_FragColor = textureCubeLodEXT(env, normalize(vOutputDirection), 4.0);
 
         }
       `,

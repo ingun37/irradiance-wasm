@@ -442,6 +442,7 @@ class PMREMCubeMapGenerator {
       const rt = new WebGLCubeRenderTarget(size, _renderTargetParams);
       this._blur(previous, rt, i - 1, i, sigma, poleAxis);
       const dct = makeDataCubeTexture(renderer, size, rt);
+      rt.dispose();
       mipmaps.push(dct);
       previous = dct;
     }

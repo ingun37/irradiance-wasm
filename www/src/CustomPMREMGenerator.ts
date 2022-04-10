@@ -61,6 +61,7 @@ const _axisDirections = [
 
 const _renderTargetParams: WebGLRenderTargetOptions = {
   magFilter: LinearFilter,
+  // minFilter: LinearFilter,
   minFilter: LinearMipmapLinearFilter,
   generateMipmaps: false,
   type: HalfFloatType,
@@ -426,7 +427,7 @@ class PMREMCubeMapGenerator {
     const autoClear = renderer.autoClear;
     renderer.autoClear = false;
     const mipmaps: CubeTexture[] = [];
-    let previous = cubeUVRenderTarget;
+    let previous = cubeUVRenderTarget.texture;
     for (let i = 1; i < this._lodPlanes.length; i++) {
       const sigma = Math.sqrt(
         this._sigmas[i] * this._sigmas[i] -
@@ -440,8 +441,9 @@ class PMREMCubeMapGenerator {
       console.log("making cube rt for lod", i, "with size of", size);
       const rt = new WebGLCubeRenderTarget(size, _renderTargetParams);
       this._blur(previous, rt, i - 1, i, sigma, poleAxis);
-      mipmaps.push(makeDataCubeTexture(renderer, size, rt));
-      previous = rt;
+      const dct = makeDataCubeTexture(renderer, size, rt);
+      mipmaps.push(dct);
+      previous = dct;
     }
 
     this.dataCubeTexture = makeDataCubeTexture(
@@ -462,7 +464,7 @@ class PMREMCubeMapGenerator {
    * accurate at the poles, but still does a decent job.
    */
   _blur(
-    previous: WebGLCubeRenderTarget,
+    previous: CubeTexture,
     current: WebGLCubeRenderTarget,
     lodIn: number,
     lodOut: number,
@@ -484,7 +486,7 @@ class PMREMCubeMapGenerator {
 
     this._halfBlur(
       // TODO: hull exception
-      pingPongRenderTarget!,
+      pingPongRenderTarget!.texture,
       current,
       lodOut,
       lodOut,
@@ -495,7 +497,7 @@ class PMREMCubeMapGenerator {
   }
 
   _halfBlur(
-    targetIn: WebGLCubeRenderTarget,
+    targetIn: CubeTexture,
     targetOut: WebGLCubeRenderTarget,
     lodIn: number,
     lodOut: number,
@@ -553,7 +555,7 @@ class PMREMCubeMapGenerator {
       weights[i] = weights[i] / sum;
     }
 
-    blurUniforms["envMap"].value = targetIn.texture;
+    blurUniforms["envMap"].value = targetIn;
     blurUniforms["samples"].value = samples;
     blurUniforms["weights"].value = weights;
     blurUniforms["latitudinal"].value = direction === "latitudinal";

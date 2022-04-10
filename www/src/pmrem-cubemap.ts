@@ -62,8 +62,8 @@ export function pmremCubemap(width: number, height: number, domID: string) {
       	varying vec3 vOutputDirection;
       	uniform samplerCube env;
         void main() {
-          // gl_FragColor = textureCubeLodEXT(env, normalize(vOutputDirection), 4.0);
-          gl_FragColor = textureCube(env, normalize(vOutputDirection));
+          gl_FragColor = textureCubeLodEXT(env, normalize(vOutputDirection), 4.0);
+          // gl_FragColor = textureCube(env, normalize(vOutputDirection));
         }
       `,
       uniforms: {
@@ -71,36 +71,35 @@ export function pmremCubemap(width: number, height: number, domID: string) {
       },
     });
 
-    const mat2 = new ShaderMaterial({
-      vertexShader: `
-                  varying vec3 vOutputDirection;
-
-      void main() {
-                  	vOutputDirection = position;
-
-      gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4( position, 1.0 );
-      }
-      `,
-      fragmentShader: `
-      	varying vec3 vOutputDirection;
-      	uniform samplerCube env;
-        void main() {
-          gl_FragColor = textureCube(env, normalize(vOutputDirection));
-        }
-      `,
-      uniforms: {
-        env: { value: newEnvMap.mipmaps[0] },
-      },
-    });
-    console.log(newEnvMap);
     const mipmaptest = new Mesh(new BoxGeometry(), mat);
     mipmaptest.translateX(-1);
 
     scene.add(mipmaptest);
 
-    const subMipmapTest = new Mesh(new BoxGeometry(), mat2);
-    subMipmapTest.translateX(1);
-    scene.add(subMipmapTest);
+    // const mat2 = new ShaderMaterial({
+    //   vertexShader: `
+    //               varying vec3 vOutputDirection;
+    //
+    //   void main() {
+    //               	vOutputDirection = position;
+    //
+    //   gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4( position, 1.0 );
+    //   }
+    //   `,
+    //   fragmentShader: `
+    //   	varying vec3 vOutputDirection;
+    //   	uniform samplerCube env;
+    //     void main() {
+    //       gl_FragColor = textureCube(env, normalize(vOutputDirection));
+    //     }
+    //   `,
+    //   uniforms: {
+    //     env: { value: newEnvMap.mipmaps[1] },
+    //   },
+    // });
+    // const subMipmapTest = new Mesh(new BoxGeometry(), mat2);
+    // subMipmapTest.translateX(1);
+    // scene.add(subMipmapTest);
     // scene.background = cubeMap;
     renderer.toneMappingExposure = 1;
     render();

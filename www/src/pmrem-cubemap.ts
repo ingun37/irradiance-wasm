@@ -4,13 +4,9 @@ import {
   BoxGeometry,
   Color,
   Mesh,
-  MeshBasicMaterial,
-  MeshStandardMaterial,
   PerspectiveCamera,
-  PMREMGenerator,
   Scene,
   ShaderMaterial,
-  TorusKnotGeometry,
   WebGLRenderer,
 } from "three";
 // import { DebugEnvironment } from "three/examples/jsm/environments/DebugEnvironment";
@@ -43,9 +39,9 @@ export function pmremCubemap(width: number, height: number, domID: string) {
     // hdrCubeMap.magFilter = THREE.LinearFilter;
     // hdrCubeMap.needsUpdate = true;
 
-    const renderTarget = pmremGenerator.fromEquirectangular(dataTexture);
+    const dataCubeTexture = pmremGenerator.fromEquirectangular(dataTexture);
     // const cubeMap = hdrCubeMap;
-    const newEnvMap = renderTarget ? pmremGenerator.dataCubeTexture : null;
+    const newEnvMap = dataCubeTexture ?? null;
 
     // console.log(renderTarget.texture.mipmaps);
     const mat = new ShaderMaterial({

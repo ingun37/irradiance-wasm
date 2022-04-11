@@ -76,15 +76,12 @@ const _renderTargetParams: WebGLRenderTargetOptions = {
 type Direction = "latitudinal" | "longitudinal";
 
 class PMREMCubeMapGenerator {
-  public dataCubeTexture: CubeTexture;
   private _renderer: WebGLRenderer;
   private _lodMax: number;
   private _cubeSize: number;
   private _sigmas: number[];
   private _sizeLods: number[];
   private _blurMaterial: ShaderMaterial | null;
-  private _cubemapMaterial: ShaderMaterial | null;
-  private _equirectMaterial: ShaderMaterial | null;
   private _pingPongRenderTarget: WebGLCubeRenderTarget | null;
 
   constructor(renderer: WebGLRenderer) {
@@ -97,8 +94,6 @@ class PMREMCubeMapGenerator {
     this._sigmas = [];
 
     this._blurMaterial = null;
-    this._cubemapMaterial = null;
-    this._equirectMaterial = null;
   }
 
   /**
@@ -120,9 +115,6 @@ class PMREMCubeMapGenerator {
    */
   dispose() {
     this._dispose();
-
-    if (this._cubemapMaterial !== null) this._cubemapMaterial.dispose();
-    if (this._equirectMaterial !== null) this._equirectMaterial.dispose();
   }
 
   // private interface
@@ -167,10 +159,10 @@ class PMREMCubeMapGenerator {
 
     const cubeUVRenderTarget = renderTarget || this._allocateTargets();
     this._textureToCubeUV(texture, cubeUVRenderTarget);
-    this._applyPMREM(cubeUVRenderTarget);
+    const dataCubeTexture = this._applyPMREM(cubeUVRenderTarget);
     this._cleanup(cubeUVRenderTarget);
 
-    return cubeUVRenderTarget;
+    return dataCubeTexture;
   }
 
   _allocateTargets() {
@@ -193,7 +185,6 @@ class PMREMCubeMapGenerator {
 
       const { _lodMax } = this;
       // TODO remove log
-      console.log("what is lodMax", _lodMax);
       ({ sizeLods: this._sizeLods, sigmas: this._sigmas } =
         _createPlanes(_lodMax));
 
@@ -245,15 +236,16 @@ class PMREMCubeMapGenerator {
       previous = dct;
     }
 
-    this.dataCubeTexture = makeDataCubeTexture(
+    const dataCubeTexture = makeDataCubeTexture(
       renderer,
       this._cubeSize,
       cubeUVRenderTarget
     );
-    this.dataCubeTexture.minFilter = LinearMipmapLinearFilter;
-    this.dataCubeTexture.mipmaps = mipmaps;
-    this.dataCubeTexture.needsUpdate = true;
+    dataCubeTexture.minFilter = LinearMipmapLinearFilter;
+    dataCubeTexture.mipmaps = mipmaps;
+    dataCubeTexture.needsUpdate = true;
     renderer.autoClear = autoClear;
+    return dataCubeTexture;
   }
 
   /**
@@ -403,7 +395,7 @@ function _createRenderTarget(size: number, params: WebGLRenderTargetOptions) {
 function _getBlurShader() {
   const weights = new Float32Array(MAX_SAMPLES);
   const poleAxis = new Vector3(0, 1, 0);
-  const shaderMaterial = new ShaderMaterial({
+  return new ShaderMaterial({
     name: "SphericalGaussianBlur",
 
     defines: {
@@ -493,8 +485,6 @@ function _getBlurShader() {
     depthWrite: false,
     side: DoubleSide,
   });
-
-  return shaderMaterial;
 }
 
 export { PMREMCubeMapGenerator };

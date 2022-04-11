@@ -46,6 +46,20 @@ export function pmrem(width: number, height: number, domID: string) {
   planeMesh.rotation.x = -Math.PI * 0.5;
   scene.add(planeMesh);
 
+  // new TextureLoader().load("uv_grid_opengl.jpg", (map) => {
+  //   const xx = _createPlanes(7);
+  //   console.log(xx);
+  //   const { lodPlanes } = xx;
+  //   let cnt = 0;
+  //   lodPlanes.forEach((lodPlane) => {
+  //     const m = new Mesh(lodPlane, new MeshBasicMaterial({ map }));
+  //     m.translateZ(cnt++);
+  //     m.translateX(500);
+  //     m.translateY(100);
+  //     scene.add(m);
+  //   });
+  // });
+
   const pmremGenerator = new PMREMGenerator(renderer);
   pmremGenerator.compileCubemapShader();
 

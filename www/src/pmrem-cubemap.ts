@@ -13,7 +13,7 @@ import {
 // import { HDRCubeTextureLoader } from "three/examples/jsm/loaders/HDRCubeTextureLoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader";
-import { PMREMCubeMapGenerator } from "./CustomPMREMGenerator";
+import { PMREMCubeMapGenerator } from "pmrem-cubemap-generator";
 
 export function pmremCubemap(width: number, height: number, domID: string) {
   const camera = new PerspectiveCamera(40, width / height, 1, 1000);

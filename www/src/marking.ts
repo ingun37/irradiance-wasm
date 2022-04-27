@@ -37,7 +37,7 @@ export async function marking(
   domID: string,
   clickRx: Observable<[number, number]>
 ) {
-  const camera = new PerspectiveCamera(40, width / height, 0.3, 4);
+  const camera = new PerspectiveCamera(40, width / height, 0.3, 100);
   camera.position.set(0, 0, 1);
   // camera.lookAt(0, 0, -10);
   const scene = new Scene();
@@ -51,19 +51,25 @@ export async function marking(
   const render = () => {
     requestAnimationFrame(() => renderer.render(scene, camera));
   };
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.minDistance = 0.1;
-  controls.maxDistance = 100;
-  controls.addEventListener("change", render);
 
   scene.add(new DirectionalLight());
   scene.add(new AmbientLight());
 
   const c = new GaussianWeightedMarkerPositionMap();
   const teapot = new Mesh(new TeapotGeometry(0.2), new MeshPhongMaterial());
-  teapot.translateX(0).translateY(0).translateZ(0);
-  camera.lookAt(0, 0, 0);
 
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.minDistance = 0.1;
+  controls.maxDistance = 10000;
+  controls.addEventListener("change", render);
+
+  // @ts-ignore
+  window.relocateTeapot = function () {
+    const newLoc = new Vector3()
+      .copy(camera.position)
+      .add(camera.getWorldDirection(new Vector3()));
+    teapot.translateX(newLoc.x).translateY(newLoc.y).translateZ(newLoc.z);
+  };
   scene.add(teapot);
   const copyUniforms = UniformsUtils.clone(CopyShader.uniforms);
   copyUniforms["opacity"].value = 1.0;

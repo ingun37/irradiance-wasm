@@ -15,6 +15,7 @@ import { FullScreenQuad } from "three/examples/jsm/postprocessing/Pass";
 
 export class GaussianWeightedMarkerPositionMap {
   // private unitPlane: Mesh;
+  smallDepth = new WebGLRenderTarget(64, 64, { type: FloatType });
   rt0 = new WebGLRenderTarget(1, 1, {
     type: FloatType,
   });
@@ -55,12 +56,7 @@ export class GaussianWeightedMarkerPositionMap {
       1,
       this.pixelBuffer
     );
-    const d = this.pixelBuffer[0];
-    const f = camera.far;
-    const n = camera.near;
-    const A = -(f + n) / (f - n);
-    const B = (-2 * f * n) / (f - n);
-    const z = B / (2 * d - 1 - A);
+
     const rayc = this.ray;
     rayc.setFromCamera({ x: NDCx, y: NDCy }, camera);
     const u = camera.getWorldDirection(new Vector3()).normalize();
@@ -69,7 +65,11 @@ export class GaussianWeightedMarkerPositionMap {
     console.log("u?", u.toArray());
 
     this.position.copy(
-      v.multiplyScalar(Math.abs(z) / u.dot(v)).add(camera.position)
+      v
+        .multiplyScalar(
+          Math.abs(calculateViewZ(camera, this.pixelBuffer[0])) / u.dot(v)
+        )
+        .add(camera.position)
     );
 
     return this.position;
@@ -92,7 +92,8 @@ export class GaussianWeightedMarkerPositionMap {
     // scene.add(this.unitPlane);
 
     const previousRT = renderer.getRenderTarget();
-
+    this.drawData(renderer, camera, scene, this.smallDepth);
+    this.resizeRTtoFitCanvas(renderer, this.rt0);
     this.drawData(renderer, camera, scene, this.rt0);
     this.blur(renderer, "x", this.rt0, this.rt1);
     this.blur(renderer, "y", this.rt1, this.final);
@@ -103,15 +104,17 @@ export class GaussianWeightedMarkerPositionMap {
     // scene.remove(this.unitPlane);
   }
 
+  resizeRTtoFitCanvas(renderer: WebGLRenderer, dst: WebGLRenderTarget) {
+    const rendererSize = renderer.getSize(new Vector2());
+    if (!rendererSize.equals(new Vector2(dst.width, dst.height)))
+      dst.setSize(rendererSize.x, rendererSize.y);
+  }
   drawData(
     renderer: WebGLRenderer,
     camera: PerspectiveCamera,
     scene: Scene,
     dst: WebGLRenderTarget
   ) {
-    const rendererSize = renderer.getSize(new Vector2());
-    if (!rendererSize.equals(new Vector2(dst.width, dst.height)))
-      dst.setSize(rendererSize.x, rendererSize.y);
     renderer.setRenderTarget(dst);
     renderer.clear();
     scene.overrideMaterial = this.material;
@@ -191,4 +194,11 @@ function makeBlurMaterial() {
 					gl_FragColor = diffuseSum/weightSum;
 				}`,
   });
+}
+function calculateViewZ(camera: PerspectiveCamera, packedDepth: number) {
+  const f = camera.far;
+  const n = camera.near;
+  const A = -(f + n) / (f - n);
+  const B = (-2 * f * n) / (f - n);
+  return B / (2 * packedDepth - 1 - A);
 }

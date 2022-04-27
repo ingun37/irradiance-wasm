@@ -24,9 +24,9 @@ export class NDCtoLinearDepthMaterial {
                 float calculateLinearZ(in float ndcDepth) {
                   float f = far;
                   float n = near;
-                  const A = -(f + n) / (f - n);
-                  const B = (-2 * f * n) / (f - n);
-                  return B / (2 * ndcDepth - 1 - A);
+                  float A = -(f + n) / (f - n);
+                  float B = (-2.0 * f * n) / (f - n);
+                  return B / (2.0 * ndcDepth - 1.0 - A);
                 }
 
 				void main() {

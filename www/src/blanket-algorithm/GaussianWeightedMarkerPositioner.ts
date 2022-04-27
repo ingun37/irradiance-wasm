@@ -12,6 +12,7 @@ import {
 } from "three";
 import { FullScreenQuad } from "three/examples/jsm/postprocessing/Pass";
 import { GaussianBlurMaterial } from "./GaussianBlurMaterial";
+import { NDCtoLinearDepthMaterial } from "./NDCtoLinearDepthMaterial";
 
 const smallSize = 64;
 
@@ -22,7 +23,7 @@ export class GaussianWeightedMarkerPositionMap {
   depth = new WebGLRenderTarget(1, 1, {
     type: FloatType,
   });
-  rt0 = new WebGLRenderTarget(1, 1, {
+  linearDepth = new WebGLRenderTarget(1, 1, {
     type: FloatType,
   });
   rt1 = new WebGLRenderTarget(1, 1, { type: FloatType });
@@ -37,7 +38,7 @@ export class GaussianWeightedMarkerPositionMap {
   minZ = 0;
 
   blurMaterial = new GaussianBlurMaterial();
-
+  linearDepthMaterial = new NDCtoLinearDepthMaterial();
   constructor() {}
 
   gaussianWeightedPosition(
@@ -64,14 +65,7 @@ export class GaussianWeightedMarkerPositionMap {
 
     this.position.copy(
       v
-        .multiplyScalar(
-          Math.abs(
-            calculateViewZ(
-              { far: -this.minZ, near: camera.near },
-              this.pixelBuffer[0]
-            )
-          ) / u.dot(v)
-        )
+        .multiplyScalar(Math.abs(this.pixelBuffer[0]) / u.dot(v))
         .add(camera.position)
     );
 
@@ -95,7 +89,17 @@ export class GaussianWeightedMarkerPositionMap {
 
     this.resizeRTtoFitCanvas(renderer, this.depth);
     this.drawData(renderer, camera, scene, this.depth);
-    this.blur(renderer, "x", this.depth, this.rt1);
+    this.resizeRTtoFitCanvas(renderer, this.linearDepth);
+    this.linearDepthMaterial.updateUniform(
+      this.depth.texture,
+      -this.minZ,
+      camera.near
+    );
+    this.quad.material = this.linearDepthMaterial.material;
+    renderer.setRenderTarget(this.linearDepth);
+    renderer.clear();
+    this.quad.render(renderer);
+    this.blur(renderer, "x", this.linearDepth, this.rt1);
     this.blur(renderer, "y", this.rt1, this.final);
 
     // clear up

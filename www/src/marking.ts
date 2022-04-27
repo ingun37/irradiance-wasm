@@ -98,6 +98,7 @@ export async function marking(
           new PointsMaterial({
             color: 0x00f000,
             size: 0.05,
+            depthTest: false,
           })
         )
       );

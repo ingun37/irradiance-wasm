@@ -45,8 +45,17 @@ export class GaussianWeightedMarkerPositionMap {
     renderer: WebGLRenderer,
     NDCx: number,
     NDCy: number,
-    camera: PerspectiveCamera
+    camera: PerspectiveCamera,
+    obj: Object3D
   ) {
+    const rayc = this.ray;
+    rayc.setFromCamera({ x: NDCx, y: NDCy }, camera);
+
+    const hits = rayc.intersectObject(obj);
+    hits.sort((x, y) => (x.distance < y.distance ? 1 : -1));
+    const hit = hits.shift();
+    if (hit) return hit.point;
+
     renderer.readRenderTargetPixels(
       this.final,
       Math.floor((this.final.width * (NDCx + 1)) / 2),
@@ -56,12 +65,8 @@ export class GaussianWeightedMarkerPositionMap {
       this.pixelBuffer
     );
 
-    const rayc = this.ray;
-    rayc.setFromCamera({ x: NDCx, y: NDCy }, camera);
     const u = camera.getWorldDirection(new Vector3()).normalize();
     const v = new Vector3().copy(rayc.ray.direction).normalize();
-    console.log("v?", v.toArray());
-    console.log("u?", u.toArray());
 
     this.position.copy(
       v
@@ -121,11 +126,15 @@ export class GaussianWeightedMarkerPositionMap {
       this.smallPixelsBuffer
     );
     let min = 1;
+    let max = 0;
     for (let i = 0; i < smallSize * smallSize; i++) {
       const d = this.smallPixelsBuffer[i * 4];
-      if (d > 0) if (d < min) min = d;
+      if (d > 0) {
+        if (d < min) min = d;
+        if (max < d) max = d;
+      }
     }
-    return calculateViewZ(camera, min);
+    return calculateViewZ(camera, (min + max) / 2);
   }
 
   resizeRTtoFitCanvas(renderer: WebGLRenderer, dst: WebGLRenderTarget) {

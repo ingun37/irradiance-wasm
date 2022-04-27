@@ -7,7 +7,9 @@ import {
   FloatType,
   Matrix4,
   Mesh,
+  MeshBasicMaterial,
   MeshPhongMaterial,
+  MeshStandardMaterial,
   NoBlending,
   Object3D,
   PerspectiveCamera,
@@ -52,11 +54,14 @@ export async function marking(
     requestAnimationFrame(() => renderer.render(scene, camera));
   };
 
-  scene.add(new DirectionalLight());
-  scene.add(new AmbientLight());
+  scene.add(new DirectionalLight(undefined, 0.5));
+  scene.add(new AmbientLight(undefined, 0.5));
 
   const c = new GaussianWeightedMarkerPositionMap();
-  const teapot = new Mesh(new TeapotGeometry(0.2), new MeshPhongMaterial());
+  const teapot = new Mesh(
+    new TeapotGeometry(0.2),
+    new MeshStandardMaterial({ color: 0x0000f0 })
+  );
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.minDistance = 0.1;
@@ -96,14 +101,14 @@ export async function marking(
       q.render(renderer);
     });
     clickRx.subscribe(([x, y]) => {
-      const p = c.gaussianWeightedPosition(renderer, x, y, camera);
+      const p = c.gaussianWeightedPosition(renderer, x, y, camera, teapot);
       console.log("position", p.x, p.y, p.z);
       scene.add(
         new Points(
           new BufferGeometry().setFromPoints([p]),
           new PointsMaterial({
             color: 0x00f000,
-            size: 0.05,
+            size: 0.02,
             depthTest: false,
           })
         )

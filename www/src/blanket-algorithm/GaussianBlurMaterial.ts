@@ -3,14 +3,14 @@ import { ShaderMaterial, Texture, Vector2 } from "three";
 export class GaussianBlurMaterial {
   material = new ShaderMaterial({
     defines: {
-      MAX_RADIUS: 30,
+      MAX_RADIUS: 60,
     },
 
     uniforms: {
       colorTexture: { value: null },
       texSize: { value: new Vector2(0.5, 0.5) },
       direction: { value: new Vector2(0.5, 0.5) },
-      kernelRadius: { value: 30 },
+      kernelRadius: { value: 60 },
     },
 
     vertexShader: `varying vec2 vUv;

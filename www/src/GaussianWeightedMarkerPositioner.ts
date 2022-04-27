@@ -1,13 +1,9 @@
 import {
-  Box3,
-  BufferGeometry,
   FloatType,
-  Matrix4,
   MeshDepthMaterial,
-  MeshPhongMaterial,
   Object3D,
   PerspectiveCamera,
-  RGBAFormat,
+  Raycaster,
   Scene,
   ShaderMaterial,
   Vector2,
@@ -15,122 +11,113 @@ import {
   WebGLRenderer,
   WebGLRenderTarget,
 } from "three";
-import { Mesh } from "three";
 import { FullScreenQuad } from "three/examples/jsm/postprocessing/Pass";
 
 export class GaussianWeightedMarkerPositionMap {
-  private unitPlane: Mesh;
-  rt = new WebGLRenderTarget(1, 1, {
+  // private unitPlane: Mesh;
+  rt0 = new WebGLRenderTarget(1, 1, {
     type: FloatType,
-    format: RGBAFormat,
   });
-  pingpong = new WebGLRenderTarget(1, 1, { type: FloatType });
+  rt1 = new WebGLRenderTarget(1, 1, { type: FloatType });
+  final = new WebGLRenderTarget(1, 1, { type: FloatType });
+
   position = new Vector3();
-  material: ShaderMaterial | MeshDepthMaterial;
-  pixelBuffer = new Float32Array(4 * 16 * 16);
+  material = new MeshDepthMaterial();
+  pixelBuffer = new Float32Array(4);
   blurMaterial = makeBlurMaterial();
   quad = new FullScreenQuad();
-  constructor(isPositional: boolean) {
-    const g = new BufferGeometry().setFromPoints([
-      new Vector3(-0.5, -0.5, 0),
-      new Vector3(0.5, 0.5, 0),
-      new Vector3(-0.5, 0.5, 0),
+  ray = new Raycaster();
 
-      new Vector3(-0.5, -0.5, 0),
-      new Vector3(0.5, -0.5, 0),
-      new Vector3(0.5, 0.5, 0),
-    ]);
-
-    this.unitPlane = new Mesh(g, new MeshPhongMaterial({}));
-    if (isPositional) {
-      this.material = new ShaderMaterial({
-        vertexShader: `
-    varying vec3 pos;
-    void main() {
-      vec4 world = modelMatrix * vec4(position, 1.0);
-      pos = world.xyz;
-      gl_Position = projectionMatrix * viewMatrix * world;
-    }
-    `,
-        fragmentShader: `
-    varying vec3 pos;
-    void main() {
-      gl_FragColor = vec4(pos, 1.0);
-    }
-    `,
-      });
-    } else {
-      this.material = new MeshDepthMaterial();
-    }
+  constructor() {
+    // const g = new BufferGeometry().setFromPoints([
+    //   new Vector3(-0.5, -0.5, 0),
+    //   new Vector3(0.5, 0.5, 0),
+    //   new Vector3(-0.5, 0.5, 0),
+    //
+    //   new Vector3(-0.5, -0.5, 0),
+    //   new Vector3(0.5, -0.5, 0),
+    //   new Vector3(0.5, 0.5, 0),
+    // ]);
+    // this.unitPlane = new Mesh(g, new MeshPhongMaterial({}));
   }
 
   gaussianWeightedPosition(
     renderer: WebGLRenderer,
     NDCx: number,
-    NDCy: number
+    NDCy: number,
+    camera: PerspectiveCamera
   ) {
-    console.log(
-      NDCx,
-      NDCy,
-      Math.floor((this.rt.width * (NDCx + 1)) / 2),
-      Math.floor((this.rt.height * (NDCy + 1)) / 2)
-    );
     renderer.readRenderTargetPixels(
-      this.rt,
-      Math.floor((this.rt.width * (NDCx + 1)) / 2),
-      Math.floor((this.rt.height * (NDCy + 1)) / 2),
-      16,
-      16,
+      this.final,
+      Math.floor((this.final.width * (NDCx + 1)) / 2),
+      Math.floor((this.final.height * (NDCy + 1)) / 2),
+      1,
+      1,
       this.pixelBuffer
     );
-    this.position.set(
-      this.pixelBuffer[0],
-      this.pixelBuffer[1],
-      this.pixelBuffer[2]
+    const d = this.pixelBuffer[0];
+    const f = camera.far;
+    const n = camera.near;
+    const A = -(f + n) / (f - n);
+    const B = (-2 * f * n) / (f - n);
+    const z = B / (2 * d - 1 - A);
+    const rayc = this.ray;
+    rayc.setFromCamera({ x: NDCx, y: NDCy }, camera);
+    const u = camera.getWorldDirection(new Vector3()).normalize();
+    const v = new Vector3().copy(rayc.ray.direction).normalize();
+    console.log("v?", v.toArray());
+    console.log("u?", u.toArray());
+
+    this.position.copy(
+      v.multiplyScalar(Math.abs(z) / u.dot(v)).add(camera.position)
     );
+
     return this.position;
   }
+
   updatePositionMap(
     camera: PerspectiveCamera,
     obj: Object3D,
     scene: Scene,
     renderer: WebGLRenderer
   ) {
-    const o = new Box3().setFromObject(obj).getCenter(new Vector3());
-    const z = o.applyMatrix4(camera.matrixWorldInverse).z;
-    const h = 2 * Math.abs(z) * Math.tan(camera.fov / 2);
-    const w = h * camera.aspect;
-    const s = new Matrix4().makeScale(w, h, 1);
-    const t = new Matrix4().makeTranslation(0, 0, z);
-    const final = new Matrix4().copy(camera.matrixWorld);
-    this.unitPlane.applyMatrix4(final.multiply(t).multiply(s));
-    scene.add(this.unitPlane);
+    // const o = new Box3().setFromObject(obj).getCenter(new Vector3());
+    // const z = o.applyMatrix4(camera.matrixWorldInverse).z;
+    // const h = 2 * Math.abs(z) * Math.tan(camera.fov / 2);
+    // const w = h * camera.aspect;
+    // const s = new Matrix4().makeScale(w, h, 1);
+    // const t = new Matrix4().makeTranslation(0, 0, z);
+    // const final = new Matrix4().copy(camera.matrixWorld);
+    // this.unitPlane.applyMatrix4(final.multiply(t).multiply(s));
+    // scene.add(this.unitPlane);
 
     const previousRT = renderer.getRenderTarget();
 
-    this.drawPositionToRT(renderer, camera, scene);
-    this.blur(renderer, "x", this.rt, this.pingpong);
-    this.blur(renderer, "y", this.pingpong, this.rt);
+    this.drawData(renderer, camera, scene, this.rt0);
+    this.blur(renderer, "x", this.rt0, this.rt1);
+    this.blur(renderer, "y", this.rt1, this.final);
 
     // clear up
     scene.overrideMaterial = null;
     renderer.setRenderTarget(previousRT);
-    scene.remove(this.unitPlane);
-    return this.rt;
+    // scene.remove(this.unitPlane);
   }
-  drawPositionToRT(
+
+  drawData(
     renderer: WebGLRenderer,
     camera: PerspectiveCamera,
-    scene: Scene
+    scene: Scene,
+    dst: WebGLRenderTarget
   ) {
     const rendererSize = renderer.getSize(new Vector2());
-    if (!rendererSize.equals(new Vector2(this.rt.width, this.rt.height)))
-      this.rt.setSize(rendererSize.x, rendererSize.y);
-    renderer.setRenderTarget(this.rt);
+    if (!rendererSize.equals(new Vector2(dst.width, dst.height)))
+      dst.setSize(rendererSize.x, rendererSize.y);
+    renderer.setRenderTarget(dst);
     renderer.clear();
     scene.overrideMaterial = this.material;
     renderer.render(scene, camera);
   }
+
   blur(
     renderer: WebGLRenderer,
     dir: "x" | "y",
@@ -158,14 +145,14 @@ export class GaussianWeightedMarkerPositionMap {
 function makeBlurMaterial() {
   return new ShaderMaterial({
     defines: {
-      MAX_RADIUS: 50,
+      MAX_RADIUS: 30,
     },
 
     uniforms: {
       colorTexture: { value: null },
       texSize: { value: new Vector2(0.5, 0.5) },
       direction: { value: new Vector2(0.5, 0.5) },
-      kernelRadius: { value: 50 },
+      kernelRadius: { value: 30 },
     },
 
     vertexShader: `varying vec2 vUv;

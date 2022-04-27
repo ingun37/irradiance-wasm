@@ -60,7 +60,7 @@ export async function marking(
   const c = new GaussianWeightedMarkerPositionMap();
   const teapot = new Mesh(
     new TeapotGeometry(0.2),
-    new MeshStandardMaterial({ color: 0x0000f0 })
+    new MeshStandardMaterial({ color: 0x5040f0 })
   );
 
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -95,29 +95,57 @@ export async function marking(
   // @ts-ignore
   window.doo = function () {
     c.updatePositionMap(camera, teapot, scene, renderer);
+    //
+    // requestAnimationFrame(() => {
+    //   renderer.clear();
+    //   q.render(renderer);
+    // });
 
-    requestAnimationFrame(() => {
-      renderer.clear();
-      q.render(renderer);
-    });
-    clickRx.subscribe(([x, y]) => {
-      const p = c.gaussianWeightedPosition(renderer, x, y, camera, teapot);
-      console.log("position", p.x, p.y, p.z);
-      scene.add(
-        new Points(
-          new BufferGeometry().setFromPoints([p]),
-          new PointsMaterial({
-            color: 0x00f000,
-            size: 0.02,
-            depthTest: false,
-          })
-        )
-      );
-    });
+    const stepX = 0.06;
+    const stepY = 0.06;
+    for (let x = 0; x < 1; x += stepX) {
+      for (let y = 0; y < 1; y += stepY) {
+        for (let signX = -1; signX <= 1; signX += 2) {
+          for (let signY = -1; signY <= 1; signY += 2) {
+            const p = c.gaussianWeightedPosition(
+              renderer,
+              x * signX,
+              y * signY,
+              camera,
+              teapot
+            );
+            scene.add(
+              new Points(
+                new BufferGeometry().setFromPoints([p]),
+                new PointsMaterial({
+                  color: 0x00f000,
+                  size: 0.02,
+                  depthTest: false,
+                })
+              )
+            );
+          }
+        }
+      }
+    }
+    // clickRx.subscribe(([x, y]) => {
+    //   const p = c.gaussianWeightedPosition(renderer, x, y, camera, teapot);
+    //   console.log("position", p.x, p.y, p.z);
+    //   scene.add(
+    //     new Points(
+    //       new BufferGeometry().setFromPoints([p]),
+    //       new PointsMaterial({
+    //         color: 0x00f000,
+    //         size: 0.02,
+    //         depthTest: false,
+    //       })
+    //     )
+    //   );
+    // });
 
     // c.f(camera, teapot, scene, renderer);
     // scene.add(c.unitPlane);
-    // render();
+    render();
   };
   render();
 }

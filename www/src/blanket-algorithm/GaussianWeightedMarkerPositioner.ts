@@ -134,7 +134,10 @@ export class GaussianWeightedMarkerPositionMap {
         if (max < d) max = d;
       }
     }
-    return calculateViewZ(camera, (min + max) / 2);
+    const minViewZ = calculateViewZ(camera, min);
+    const maxViewZ = calculateViewZ(camera, max);
+
+    return (minViewZ + maxViewZ) / 2;
   }
 
   resizeRTtoFitCanvas(renderer: WebGLRenderer, dst: WebGLRenderTarget) {

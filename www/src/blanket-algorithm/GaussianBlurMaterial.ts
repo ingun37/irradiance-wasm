@@ -3,14 +3,14 @@ import { ShaderMaterial, Texture, Vector2 } from "three";
 export class GaussianBlurMaterial {
   material = new ShaderMaterial({
     defines: {
-      MAX_RADIUS: 60,
+      MAX_RADIUS: 100,
     },
 
     uniforms: {
       colorTexture: { value: null },
       texSize: { value: new Vector2(0.5, 0.5) },
       direction: { value: new Vector2(0.5, 0.5) },
-      kernelRadius: { value: 60 },
+      kernelRadius: { value: 100 },
     },
 
     vertexShader: `varying vec2 vUv;
@@ -38,8 +38,7 @@ export class GaussianBlurMaterial {
 					vec2 delta = direction * invSize * kernelRadius/float(MAX_RADIUS);
 					vec2 uvOffset = delta;
 					for( int i = 1; i <= MAX_RADIUS; i ++ ) {
-					  // * 2 를 해주는 이유는 엣지 근처에서는 모델 position 값과 근사하기위함 Ingun 2022.04.27
-						float w = 4.0 * gaussianPdf(uvOffset.x, kernelRadius);
+						float w = gaussianPdf(uvOffset.x, kernelRadius);
 						vec4 sample1 = texture2D( colorTexture, vUv + uvOffset);
 						vec4 sample2 = texture2D( colorTexture, vUv - uvOffset);
 						diffuseSum += ((sample1 + sample2) * w);

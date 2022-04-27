@@ -30,8 +30,14 @@ export class NDCtoLinearDepthMaterial {
                 }
 
 				void main() {
-					float linearZ = calculateLinearZ(texture2D(ndcDepthMap, vUv).x);
-					gl_FragColor = vec4(vec3(linearZ,linearZ,linearZ), 1.0);
+				    float ndcZ = texture2D(ndcDepthMap, vUv).x;
+					float s = 1.0;
+					if(ndcZ > 0.0) {
+					  s = 1.5;
+					}
+					float lz = calculateLinearZ(ndcZ);
+					float l0 = calculateLinearZ(0.0);
+					gl_FragColor = vec4(vec3(mix(l0, lz, s)), 1.0);
 				}`,
   });
   updateUniform(ndcDepthMap: Texture, far: number, near: number) {

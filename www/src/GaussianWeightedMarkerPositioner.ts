@@ -13,9 +13,12 @@ import {
 } from "three";
 import { FullScreenQuad } from "three/examples/jsm/postprocessing/Pass";
 
+const smallSize = 64;
+
 export class GaussianWeightedMarkerPositionMap {
   // private unitPlane: Mesh;
-  smallDepth = new WebGLRenderTarget(64, 64, { type: FloatType });
+  smallDepth = new WebGLRenderTarget(smallSize, smallSize, { type: FloatType });
+  smallPixelsBuffer = new Float32Array(4 * smallSize * smallSize);
   rt0 = new WebGLRenderTarget(1, 1, {
     type: FloatType,
   });
@@ -28,6 +31,8 @@ export class GaussianWeightedMarkerPositionMap {
   blurMaterial = makeBlurMaterial();
   quad = new FullScreenQuad();
   ray = new Raycaster();
+
+  minZ = 0;
 
   constructor() {
     // const g = new BufferGeometry().setFromPoints([
@@ -67,7 +72,12 @@ export class GaussianWeightedMarkerPositionMap {
     this.position.copy(
       v
         .multiplyScalar(
-          Math.abs(calculateViewZ(camera, this.pixelBuffer[0])) / u.dot(v)
+          Math.abs(
+            calculateViewZ(
+              { far: -this.minZ, near: camera.near },
+              this.pixelBuffer[0]
+            )
+          ) / u.dot(v)
         )
         .add(camera.position)
     );
@@ -81,18 +91,27 @@ export class GaussianWeightedMarkerPositionMap {
     scene: Scene,
     renderer: WebGLRenderer
   ) {
-    // const o = new Box3().setFromObject(obj).getCenter(new Vector3());
-    // const z = o.applyMatrix4(camera.matrixWorldInverse).z;
-    // const h = 2 * Math.abs(z) * Math.tan(camera.fov / 2);
-    // const w = h * camera.aspect;
-    // const s = new Matrix4().makeScale(w, h, 1);
-    // const t = new Matrix4().makeTranslation(0, 0, z);
-    // const final = new Matrix4().copy(camera.matrixWorld);
-    // this.unitPlane.applyMatrix4(final.multiply(t).multiply(s));
-    // scene.add(this.unitPlane);
+    const context = {
+      rt: renderer.getRenderTarget(),
+      far: camera.far,
+    };
 
-    const previousRT = renderer.getRenderTarget();
-    this.drawData(renderer, camera, scene, this.smallDepth);
+    this.minZ = this.findMinZ(renderer, scene, camera);
+    camera.far = -this.minZ;
+    camera.updateProjectionMatrix();
+    // const p = makeUnitPlane();
+    // p.applyMatrix4(
+    //   new Matrix4()
+    //     .makeTranslation(0, 0, calculateViewZ(camera, min))
+    //     .premultiply(camera.matrixWorld)
+    // );
+    // scene.add(p);
+    // console.log(
+    //   "min",
+    //   calculateViewZ(camera, min),
+    //   "max",
+    //   calculateViewZ(camera, max)
+    // );
     this.resizeRTtoFitCanvas(renderer, this.rt0);
     this.drawData(renderer, camera, scene, this.rt0);
     this.blur(renderer, "x", this.rt0, this.rt1);
@@ -100,8 +119,28 @@ export class GaussianWeightedMarkerPositionMap {
 
     // clear up
     scene.overrideMaterial = null;
-    renderer.setRenderTarget(previousRT);
+    renderer.setRenderTarget(context.rt);
+    camera.far = context.far;
+    camera.updateProjectionMatrix();
     // scene.remove(this.unitPlane);
+  }
+
+  findMinZ(renderer: WebGLRenderer, scene: Scene, camera: PerspectiveCamera) {
+    this.drawData(renderer, camera, scene, this.smallDepth);
+    renderer.readRenderTargetPixels(
+      this.smallDepth,
+      0,
+      0,
+      smallSize,
+      smallSize,
+      this.smallPixelsBuffer
+    );
+    let min = 1;
+    for (let i = 0; i < smallSize * smallSize; i++) {
+      const d = this.smallPixelsBuffer[i * 4];
+      if (d > 0) if (d < min) min = d;
+    }
+    return calculateViewZ(camera, min);
   }
 
   resizeRTtoFitCanvas(renderer: WebGLRenderer, dst: WebGLRenderTarget) {
@@ -109,6 +148,7 @@ export class GaussianWeightedMarkerPositionMap {
     if (!rendererSize.equals(new Vector2(dst.width, dst.height)))
       dst.setSize(rendererSize.x, rendererSize.y);
   }
+
   drawData(
     renderer: WebGLRenderer,
     camera: PerspectiveCamera,
@@ -195,10 +235,37 @@ function makeBlurMaterial() {
 				}`,
   });
 }
-function calculateViewZ(camera: PerspectiveCamera, packedDepth: number) {
+
+function calculateViewZ(
+  camera: PerspectiveCamera | { far: number; near: number },
+  packedDepth: number
+) {
   const f = camera.far;
   const n = camera.near;
   const A = -(f + n) / (f - n);
   const B = (-2 * f * n) / (f - n);
   return B / (2 * packedDepth - 1 - A);
 }
+
+// const o = new Box3().setFromObject(obj).getCenter(new Vector3());
+// const z = o.applyMatrix4(camera.matrixWorldInverse).z;
+// const h = 2 * Math.abs(z) * Math.tan(camera.fov / 2);
+// const w = h * camera.aspect;
+// const s = new Matrix4().makeScale(w, h, 1);
+// const t = new Matrix4().makeTranslation(0, 0, z);
+// const final = new Matrix4().copy(camera.matrixWorld);
+// this.unitPlane.applyMatrix4(final.multiply(t).multiply(s));
+// scene.add(this.unitPlane);
+
+// function makeUnitPlane() {
+//   const g = new BufferGeometry().setFromPoints([
+//     new Vector3(-0.5, -0.5, 0),
+//     new Vector3(0.5, 0.5, 0),
+//     new Vector3(-0.5, 0.5, 0),
+//
+//     new Vector3(-0.5, -0.5, 0),
+//     new Vector3(0.5, -0.5, 0),
+//     new Vector3(0.5, 0.5, 0),
+//   ]);
+//   return new Mesh(g, new MeshBasicMaterial({ color: 0x0000f0 }));
+// }

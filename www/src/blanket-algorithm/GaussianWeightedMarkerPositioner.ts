@@ -125,19 +125,33 @@ export class GaussianWeightedMarkerPositionMap {
       smallSize,
       this.smallPixelsBuffer
     );
-    let min = 1;
-    let max = 0;
+
+    const gaussian64x64 = (x: number, y: number) => {
+      const m = 32;
+      const s = 2;
+      return (
+        (1 / (s * (Math.PI * 2))) *
+        Math.exp(
+          -(
+            ((x - m) * (x - m)) / (2 * s * s) +
+            ((y - m) * (y - m)) / (2 * s * s)
+          )
+        )
+      );
+    };
+    let weightSum = 0;
+    let sum = 0;
     for (let i = 0; i < smallSize * smallSize; i++) {
       const d = this.smallPixelsBuffer[i * 4];
       if (d > 0) {
-        if (d < min) min = d;
-        if (max < d) max = d;
+        const w = gaussian64x64(Math.floor(i / 64), i % 64);
+        weightSum += w;
+        const ld = calculateViewZ(camera, d);
+        sum += w * ld;
       }
     }
-    const minViewZ = calculateViewZ(camera, min);
-    const maxViewZ = calculateViewZ(camera, max);
 
-    return (minViewZ + maxViewZ) / 2;
+    return sum / weightSum;
   }
 
   resizeRTtoFitCanvas(renderer: WebGLRenderer, dst: WebGLRenderTarget) {

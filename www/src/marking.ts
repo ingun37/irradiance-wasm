@@ -30,7 +30,7 @@ import { TeapotGeometry } from "three/examples/jsm/geometries/TeapotGeometry";
 import { FullScreenQuad } from "three/examples/jsm/postprocessing/Pass";
 import { CopyShader } from "three/examples/jsm/shaders/CopyShader";
 import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass";
-import { GaussianPositionMap } from "./blanket-algorithm/GaussianWeightedMarkerPositioner";
+import { GaussianPositionMap } from "./blanket-algorithm/GaussianPositionMap";
 import { Observable } from "rxjs";
 
 export async function marking(

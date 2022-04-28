@@ -95,15 +95,14 @@ export class GaussianPositionMap {
     this.resizeRTtoFitCanvas(renderer, this.depth);
     this.drawData(renderer, camera, scene, this.depth);
     this.resizeRTtoFitCanvas(renderer, this.linearDepth);
-    this.linearDepthMaterial.updateUniform(
+    this.linearDepthMaterial.renderWithUniform(
       this.depth.texture,
       -this.minZ,
-      camera.near
+      camera.near,
+      this.quad,
+      renderer,
+      this.linearDepth
     );
-    this.quad.material = this.linearDepthMaterial.material;
-    renderer.setRenderTarget(this.linearDepth);
-    renderer.clear();
-    this.quad.render(renderer);
     this.resizeRTtoFitCanvas(renderer, this.blurX);
     this.blurMaterial.renderWithUniform(
       "x",

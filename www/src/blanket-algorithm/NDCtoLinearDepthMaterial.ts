@@ -1,4 +1,10 @@
-import { ShaderMaterial, Texture } from "three";
+import {
+  ShaderMaterial,
+  Texture,
+  WebGLRenderer,
+  WebGLRenderTarget,
+} from "three";
+import { FullScreenQuad } from "three/examples/jsm/postprocessing/Pass";
 
 export class NDCtoLinearDepthMaterial {
   material = new ShaderMaterial({
@@ -41,9 +47,21 @@ export class NDCtoLinearDepthMaterial {
 					gl_FragColor = vec4(vec3(lz), 1.0);
 				}`,
   });
-  updateUniform(ndcDepthMap: Texture, far: number, near: number) {
+  renderWithUniform(
+    ndcDepthMap: Texture,
+    far: number,
+    near: number,
+    quad: FullScreenQuad,
+    renderer: WebGLRenderer,
+    dst: WebGLRenderTarget
+  ) {
     this.material.uniforms.ndcDepthMap.value = ndcDepthMap;
     this.material.uniforms.far.value = far;
     this.material.uniforms.near.value = near;
+
+    quad.material = this.material;
+    renderer.setRenderTarget(dst);
+    renderer.clear();
+    quad.render(renderer);
   }
 }

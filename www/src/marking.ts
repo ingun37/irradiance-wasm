@@ -90,7 +90,7 @@ export async function marking(
   });
 
   const q = new FullScreenQuad(materialCopy);
-  copyUniforms["tDiffuse"].value = c.final.texture;
+  copyUniforms["tDiffuse"].value = c.blurXY.texture;
 
   // @ts-ignore
   window.doo = function () {

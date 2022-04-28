@@ -26,8 +26,8 @@ export class GaussianPositionMap {
   linearDepth = new WebGLRenderTarget(1, 1, {
     type: FloatType,
   });
-  rt1 = new WebGLRenderTarget(1, 1, { type: FloatType });
-  final = new WebGLRenderTarget(1, 1, { type: FloatType });
+  blurX = new WebGLRenderTarget(1, 1, { type: FloatType });
+  blurXY = new WebGLRenderTarget(1, 1, { type: FloatType });
 
   position = new Vector3();
   material = new MeshDepthMaterial();
@@ -57,9 +57,9 @@ export class GaussianPositionMap {
     if (hit) return hit.point;
 
     renderer.readRenderTargetPixels(
-      this.final,
-      Math.floor((this.final.width * (NDCx + 1)) / 2),
-      Math.floor((this.final.height * (NDCy + 1)) / 2),
+      this.blurXY,
+      Math.floor((this.blurXY.width * (NDCx + 1)) / 2),
+      Math.floor((this.blurXY.height * (NDCy + 1)) / 2),
       1,
       1,
       this.pixelBuffer
@@ -104,8 +104,8 @@ export class GaussianPositionMap {
     renderer.setRenderTarget(this.linearDepth);
     renderer.clear();
     this.quad.render(renderer);
-    this.blur(renderer, "x", this.linearDepth, this.rt1);
-    this.blur(renderer, "y", this.rt1, this.final);
+    this.blur(renderer, "x", this.linearDepth, this.blurX);
+    this.blur(renderer, "y", this.blurX, this.blurXY);
 
     // clear up
     scene.overrideMaterial = null;

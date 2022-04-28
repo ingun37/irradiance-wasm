@@ -16,7 +16,7 @@ import { NDCtoLinearDepthMaterial } from "./NDCtoLinearDepthMaterial";
 
 const smallSize = 64;
 
-export class GaussianWeightedMarkerPositionMap {
+export class GaussianPositionMap {
   // private unitPlane: Mesh;
   smallDepth = new WebGLRenderTarget(smallSize, smallSize, { type: FloatType });
   smallPixelsBuffer = new Float32Array(4 * smallSize * smallSize);

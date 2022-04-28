@@ -30,7 +30,7 @@ import { TeapotGeometry } from "three/examples/jsm/geometries/TeapotGeometry";
 import { FullScreenQuad } from "three/examples/jsm/postprocessing/Pass";
 import { CopyShader } from "three/examples/jsm/shaders/CopyShader";
 import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass";
-import { GaussianWeightedMarkerPositionMap } from "./blanket-algorithm/GaussianWeightedMarkerPositioner";
+import { GaussianPositionMap } from "./blanket-algorithm/GaussianWeightedMarkerPositioner";
 import { Observable } from "rxjs";
 
 export async function marking(
@@ -57,7 +57,7 @@ export async function marking(
   scene.add(new DirectionalLight(undefined, 0.5));
   scene.add(new AmbientLight(undefined, 0.5));
 
-  const c = new GaussianWeightedMarkerPositionMap();
+  const c = new GaussianPositionMap();
   const teapot = new Mesh(
     new TeapotGeometry(0.2),
     new MeshStandardMaterial({ color: 0x5040f0 })

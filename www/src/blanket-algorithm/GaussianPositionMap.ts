@@ -15,19 +15,20 @@ import { GaussianBlurMaterial } from "./GaussianBlurMaterial";
 import { NDCtoLinearDepthMaterial } from "./NDCtoLinearDepthMaterial";
 
 const smallSize = 64;
-
+function floatRenderTarget(w: number = 1, h: number = 1) {
+  return new WebGLRenderTarget(w, h, {
+    type: FloatType,
+    generateMipmaps: false,
+  });
+}
 export class GaussianPositionMap {
   // private unitPlane: Mesh;
-  smallDepth = new WebGLRenderTarget(smallSize, smallSize, { type: FloatType });
+  smallDepth = floatRenderTarget(smallSize, smallSize);
   smallPixelsBuffer = new Float32Array(4 * smallSize * smallSize);
-  depth = new WebGLRenderTarget(1, 1, {
-    type: FloatType,
-  });
-  linearDepth = new WebGLRenderTarget(1, 1, {
-    type: FloatType,
-  });
-  blurX = new WebGLRenderTarget(1, 1, { type: FloatType });
-  blurXY = new WebGLRenderTarget(1, 1, { type: FloatType });
+  depth = floatRenderTarget();
+  linearDepth = floatRenderTarget();
+  blurX = floatRenderTarget();
+  blurXY = floatRenderTarget();
 
   position = new Vector3();
   material = new MeshDepthMaterial();

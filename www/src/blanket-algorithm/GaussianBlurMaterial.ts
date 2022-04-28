@@ -1,4 +1,10 @@
-import { ShaderMaterial, Texture, Vector2 } from "three";
+import {
+  ShaderMaterial,
+  Vector2,
+  WebGLRenderer,
+  WebGLRenderTarget,
+} from "three";
+import { FullScreenQuad } from "three/examples/jsm/postprocessing/Pass";
 
 export class GaussianBlurMaterial {
   material = new ShaderMaterial({
@@ -49,15 +55,21 @@ export class GaussianBlurMaterial {
 				}`,
   });
 
-  updateUniform(
-    texture: Texture,
+  renderWithUniform(
     direction: "x" | "y",
-    texWidth: number,
-    texHeight: number
+    quad: FullScreenQuad,
+    renderer: WebGLRenderer,
+    src: WebGLRenderTarget,
+    dst: WebGLRenderTarget
   ) {
-    this.material.uniforms["colorTexture"].value = texture;
+    this.material.uniforms["colorTexture"].value = src.texture;
     this.material.uniforms["direction"].value =
       direction === "x" ? new Vector2(1, 0) : new Vector2(0, 1);
-    this.material.uniforms["texSize"].value.set(texWidth, texHeight);
+    this.material.uniforms["texSize"].value.set(src.width, src.height);
+
+    quad.material = this.material;
+    renderer.setRenderTarget(dst);
+    renderer.clear();
+    quad.render(renderer);
   }
 }

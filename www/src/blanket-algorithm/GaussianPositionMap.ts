@@ -104,8 +104,22 @@ export class GaussianPositionMap {
     renderer.setRenderTarget(this.linearDepth);
     renderer.clear();
     this.quad.render(renderer);
-    this.blur(renderer, "x", this.linearDepth, this.blurX);
-    this.blur(renderer, "y", this.blurX, this.blurXY);
+    this.resizeRTtoFitCanvas(renderer, this.blurX);
+    this.blurMaterial.renderWithUniform(
+      "x",
+      this.quad,
+      renderer,
+      this.linearDepth,
+      this.blurX
+    );
+    this.resizeRTtoFitCanvas(renderer, this.blurXY);
+    this.blurMaterial.renderWithUniform(
+      "y",
+      this.quad,
+      renderer,
+      this.blurX,
+      this.blurXY
+    );
 
     // clear up
     scene.overrideMaterial = null;
@@ -170,20 +184,6 @@ export class GaussianPositionMap {
     renderer.clear();
     scene.overrideMaterial = this.material;
     renderer.render(scene, camera);
-  }
-
-  blur(
-    renderer: WebGLRenderer,
-    dir: "x" | "y",
-    src: WebGLRenderTarget,
-    dst: WebGLRenderTarget
-  ) {
-    this.resizeRTtoFitCanvas(renderer, dst);
-    this.blurMaterial.updateUniform(src.texture, dir, dst.width, dst.height);
-    this.quad.material = this.blurMaterial.material;
-    renderer.setRenderTarget(dst);
-    renderer.clear();
-    this.quad.render(renderer);
   }
 
   // drawLinearDepth(

@@ -12,6 +12,7 @@ export class NDCtoLinearDepthMaterial {
       ndcDepthMap: { value: null },
       far: { value: 0 },
       near: { value: 0 },
+      amplify: { value: 2 },
     },
 
     vertexShader: `
@@ -26,7 +27,8 @@ export class NDCtoLinearDepthMaterial {
 				uniform sampler2D ndcDepthMap;
 				uniform float far;
 				uniform float near;
-
+                uniform float amplify;
+                
                 float calculateLinearZ(in float ndcDepth) {
                   float f = far;
                   float n = near;
@@ -35,15 +37,20 @@ export class NDCtoLinearDepthMaterial {
                   return B / (2.0 * ndcDepth - 1.0 - A);
                 }
 
+                float scaleNDC(in float ndcDepth, in float by) {
+                  float d = ndcDepth;
+                  float f = far;
+                  float n = near;
+                  float A = -(f + n) / (f - n);
+                  float B = (-2.0 * f * n) / (f - n);
+                  return B / (2.0*(by*(B/(2.0*d-1.0-A) + f) - f)) + (A+1.0)/2.0;
+                }
 				void main() {
 				    float ndcZ = texture2D(ndcDepthMap, vUv).x;
-					//float s = 1.0;
-					//if(ndcZ > 0.0) {
-					//  s = 1.0;
-					//}
-					float lz = calculateLinearZ(ndcZ);
-					//float l0 = calculateLinearZ(0.0);
-					//gl_FragColor = vec4(vec3(mix(l0, lz, s)), 1.0);
+				    float scale = 1.0;
+				    if(0.0 < ndcZ)
+				      scale = amplify;
+					float lz = calculateLinearZ(scaleNDC(ndcZ, scale));
 					gl_FragColor = vec4(vec3(lz), 1.0);
 				}`,
   });

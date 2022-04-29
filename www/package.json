@@ -20,6 +20,7 @@
     "@emotion/styled": "^11.6.0",
     "@fontsource/roboto": "^4.5.2",
     "@mui/material": "^5.4.0",
+    "babel-preset-gatsby": "^2.13.0",
     "fflate": "^0.7.3",
     "fp-ts": "^2.11.8",
     "gatsby": "^4.6.0",

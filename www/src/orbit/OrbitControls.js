@@ -1,4 +1,5 @@
 import {
+  Clock,
   EventDispatcher,
   MOUSE,
   Quaternion,
@@ -183,8 +184,12 @@ class OrbitControls extends EventDispatcher {
         }
 
         if (scope.enableDamping) {
-          spherical.theta += sphericalDelta.theta * scope.dampingFactor;
-          spherical.phi += sphericalDelta.phi * scope.dampingFactor;
+          const d = clock.getDelta() / (1 / 60);
+          const factorByTime = 1 - Math.pow(1 - scope.dampingFactor, d);
+
+          // console.log("delta", clock.getDelta());
+          spherical.theta += sphericalDelta.theta * factorByTime;
+          spherical.phi += sphericalDelta.phi * factorByTime;
         } else {
           spherical.theta += sphericalDelta.theta;
           spherical.phi += sphericalDelta.phi;
@@ -322,6 +327,9 @@ class OrbitControls extends EventDispatcher {
     const spherical = new Spherical();
     const sphericalDelta = new Spherical();
     this.sphericalDelta = sphericalDelta;
+
+    const clock = new Clock();
+
     let scale = 1;
     const panOffset = new Vector3();
     let zoomChanged = false;
@@ -817,6 +825,7 @@ class OrbitControls extends EventDispatcher {
 
       if (state !== STATE.NONE) {
         scope.dispatchEvent(_startEvent);
+        clock.start();
       }
     }
 
@@ -934,6 +943,7 @@ class OrbitControls extends EventDispatcher {
 
       if (state !== STATE.NONE) {
         scope.dispatchEvent(_startEvent);
+        clock.start();
       }
     }
 

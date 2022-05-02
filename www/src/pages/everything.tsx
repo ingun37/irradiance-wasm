@@ -24,6 +24,10 @@ import InputImage from "./input-image";
 import PMREMDebug from "./pmrem-debug";
 import ThreeDebug from "./three-debug";
 import { pmremCubemap } from "../pmrem-cubemap";
+import { codetest } from "../codetest";
+import { marking } from "../marking";
+import { gaussianDepth } from "../depth";
+import { damping } from "../damping";
 
 const Item = styled(Paper)(({ theme }) => ({
   ...theme.typography.body2,
@@ -47,170 +51,171 @@ export default function Everything() {
       <Header />
       <InputImage onFile={setImage} />
 
-      <Stack direction="row" spacing={2}>
-        <Item>
-          <Stack spacing={2} alignItems="center">
-            <Typography variant="h6">Diffuse Irradiance Map</Typography>
+      {/*<Stack direction="row" spacing={2}>*/}
+      {/*  <Item>*/}
+      {/*    <Stack spacing={2} alignItems="center">*/}
+      {/*      <Typography variant="h6">Diffuse Irradiance Map</Typography>*/}
 
-            <Item>
-              <Typography>sampling pattern (Fibonacci sphere)</Typography>
+      {/*      <Item>*/}
+      {/*        <Typography>sampling pattern (Fibonacci sphere)</Typography>*/}
 
-              <PointsViewer
-                buffer={() => wasm.fibonacci_hemi_sphere(300)}
-                itemSize={3}
-                uniqueId="fibo"
-              />
-            </Item>
-            <Stack direction="row" spacing={2}>
-              <TextField
-                style={{ width: 120 }}
-                id="outlined-number"
-                label="sample size"
-                type="number"
-                value={diffuseSampleSize}
-                onChange={(e) =>
-                  setDiffuseSampleSize(Number.parseInt(e.target.value))
-                }
-              />
-              <TextField
-                style={{ width: 120 }}
-                id="outlined-number"
-                label="blur sigma"
-                value={blurSigma}
-                onChange={(e) => setBlurSigma(e.target.value)}
-              />
-            </Stack>
+      {/*        <PointsViewer*/}
+      {/*          buffer={() => wasm.fibonacci_hemi_sphere(300)}*/}
+      {/*          itemSize={3}*/}
+      {/*          uniqueId="fibo"*/}
+      {/*        />*/}
+      {/*      </Item>*/}
+      {/*      <Stack direction="row" spacing={2}>*/}
+      {/*        <TextField*/}
+      {/*          style={{ width: 120 }}*/}
+      {/*          id="outlined-number"*/}
+      {/*          label="sample size"*/}
+      {/*          type="number"*/}
+      {/*          value={diffuseSampleSize}*/}
+      {/*          onChange={(e) =>*/}
+      {/*            setDiffuseSampleSize(Number.parseInt(e.target.value))*/}
+      {/*          }*/}
+      {/*        />*/}
+      {/*        <TextField*/}
+      {/*          style={{ width: 120 }}*/}
+      {/*          id="outlined-number"*/}
+      {/*          label="blur sigma"*/}
+      {/*          value={blurSigma}*/}
+      {/*          onChange={(e) => setBlurSigma(e.target.value)}*/}
+      {/*        />*/}
+      {/*      </Stack>*/}
 
-            <Button
-              disabled={image === null}
-              onClick={() => {
-                if (image) {
-                  const buffers = generateDiffuseIrradianceMap(
-                    image,
-                    diffuseSampleSize,
-                    Number.parseFloat(blurSigma)
-                  );
-                  setItems(
-                    buffers.reduce(
-                      (m, buffer, idx) =>
-                        m.set(`Environment_c0${idx}.png.hdr`, buffer),
-                      new Map()
-                    )
-                  );
-                }
-              }}
-            >
-              generate
-            </Button>
-          </Stack>
-        </Item>
-        <Item>
-          <Stack spacing={2} alignItems="center">
-            <Typography variant="h6">Pre-Filtered Environment Map</Typography>
+      {/*      <Button*/}
+      {/*        disabled={image === null}*/}
+      {/*        onClick={() => {*/}
+      {/*          if (image) {*/}
+      {/*            const buffers = generateDiffuseIrradianceMap(*/}
+      {/*              image,*/}
+      {/*              diffuseSampleSize,*/}
+      {/*              Number.parseFloat(blurSigma)*/}
+      {/*            );*/}
+      {/*            setItems(*/}
+      {/*              buffers.reduce(*/}
+      {/*                (m, buffer, idx) =>*/}
+      {/*                  m.set(`Environment_c0${idx}.png.hdr`, buffer),*/}
+      {/*                new Map()*/}
+      {/*              )*/}
+      {/*            );*/}
+      {/*          }*/}
+      {/*        }}*/}
+      {/*      >*/}
+      {/*        generate*/}
+      {/*      </Button>*/}
+      {/*    </Stack>*/}
+      {/*  </Item>*/}
+      {/*  <Item>*/}
+      {/*    <Stack spacing={2} alignItems="center">*/}
+      {/*      <Typography variant="h6">Pre-Filtered Environment Map</Typography>*/}
 
-            <Item>
-              <Typography>sampling pattern</Typography>
+      {/*      <Item>*/}
+      {/*        <Typography>sampling pattern</Typography>*/}
 
-              <PointsViewer
-                buffer={() => wasm.the_step_2(1, 1, 1, roughness, 60)}
-                itemSize={3}
-                uniqueId="thestep2"
-              />
-            </Item>
-            <Stack direction="row" spacing={2}>
-              <TextField
-                style={{ width: 90 }}
-                label="sample size"
-                type="number"
-                value={specularSampleSize}
-                onChange={(e) =>
-                  setSpecularSampleSize(Number.parseInt(e.target.value))
-                }
-              />
-              <TextField
-                style={{ width: 90 }}
-                label="map size"
-                type="number"
-                value={specularMapSize}
-                onChange={(e) =>
-                  setSpecularMapSize(Number.parseInt(e.target.value))
-                }
-              />
-              <TextField
-                style={{ width: 90 }}
-                label="mip-levels"
-                type="number"
-                value={specularMipLevels}
-                onChange={(e) =>
-                  setSpecularMipLevels(Number.parseInt(e.target.value))
-                }
-              />
-            </Stack>
-            <Button
-              disabled={image === null}
-              onClick={() => {
-                if (image)
-                  generatePreFilteredSpecularMap(
-                    image,
-                    specularSampleSize,
-                    specularMapSize,
-                    specularMipLevels
-                  ).then((buffers) => {
-                    setItems(
-                      buffers.reduce(
-                        (m, buffer, idx) =>
-                          m.set(
-                            `Environment_m0${Math.floor(idx / 6)}_c0${
-                              idx % 6
-                            }.png.hdr`,
-                            buffer
-                          ),
-                        new Map()
-                      )
-                    );
-                  });
-              }}
-            >
-              generate
-            </Button>
-          </Stack>
-        </Item>
-      </Stack>
+      {/*        <PointsViewer*/}
+      {/*          buffer={() => wasm.the_step_2(1, 1, 1, roughness, 60)}*/}
+      {/*          itemSize={3}*/}
+      {/*          uniqueId="thestep2"*/}
+      {/*        />*/}
+      {/*      </Item>*/}
+      {/*      <Stack direction="row" spacing={2}>*/}
+      {/*        <TextField*/}
+      {/*          style={{ width: 90 }}*/}
+      {/*          label="sample size"*/}
+      {/*          type="number"*/}
+      {/*          value={specularSampleSize}*/}
+      {/*          onChange={(e) =>*/}
+      {/*            setSpecularSampleSize(Number.parseInt(e.target.value))*/}
+      {/*          }*/}
+      {/*        />*/}
+      {/*        <TextField*/}
+      {/*          style={{ width: 90 }}*/}
+      {/*          label="map size"*/}
+      {/*          type="number"*/}
+      {/*          value={specularMapSize}*/}
+      {/*          onChange={(e) =>*/}
+      {/*            setSpecularMapSize(Number.parseInt(e.target.value))*/}
+      {/*          }*/}
+      {/*        />*/}
+      {/*        <TextField*/}
+      {/*          style={{ width: 90 }}*/}
+      {/*          label="mip-levels"*/}
+      {/*          type="number"*/}
+      {/*          value={specularMipLevels}*/}
+      {/*          onChange={(e) =>*/}
+      {/*            setSpecularMipLevels(Number.parseInt(e.target.value))*/}
+      {/*          }*/}
+      {/*        />*/}
+      {/*      </Stack>*/}
+      {/*      <Button*/}
+      {/*        disabled={image === null}*/}
+      {/*        onClick={() => {*/}
+      {/*          if (image)*/}
+      {/*            generatePreFilteredSpecularMap(*/}
+      {/*              image,*/}
+      {/*              specularSampleSize,*/}
+      {/*              specularMapSize,*/}
+      {/*              specularMipLevels*/}
+      {/*            ).then((buffers) => {*/}
+      {/*              setItems(*/}
+      {/*                buffers.reduce(*/}
+      {/*                  (m, buffer, idx) =>*/}
+      {/*                    m.set(*/}
+      {/*                      `Environment_m0${Math.floor(idx / 6)}_c0${*/}
+      {/*                        idx % 6*/}
+      {/*                      }.png.hdr`,*/}
+      {/*                      buffer*/}
+      {/*                    ),*/}
+      {/*                  new Map()*/}
+      {/*                )*/}
+      {/*              );*/}
+      {/*            });*/}
+      {/*        }}*/}
+      {/*      >*/}
+      {/*        generate*/}
+      {/*      </Button>*/}
+      {/*    </Stack>*/}
+      {/*  </Item>*/}
+      {/*</Stack>*/}
       {/*<VisualDebug />*/}
-      <Stack spacing={2} direction="row">
-        <Button
-          onClick={() => {
-            let z: any = {};
-            items.forEach((buffer, name) => {
-              z[name] = buffer;
-            });
-            const zipped = fflate.zipSync(z);
-            downloadBlob(zipped, "environment-maps.zip");
-          }}
-        >
-          Download All
-        </Button>
-        <Button
-          disabled={image === null}
-          onClick={() => {
-            if (image) downloadBlurredHDR(image, Number.parseFloat(blurSigma));
-          }}
-        >
-          Download Blurred
-        </Button>
-        <Button onClick={webGpuTest}>WebGPU test</Button>
-      </Stack>
+      {/*<Stack spacing={2} direction="row">*/}
+      {/*  <Button*/}
+      {/*    onClick={() => {*/}
+      {/*      let z: any = {};*/}
+      {/*      items.forEach((buffer, name) => {*/}
+      {/*        z[name] = buffer;*/}
+      {/*      });*/}
+      {/*      const zipped = fflate.zipSync(z);*/}
+      {/*      downloadBlob(zipped, "environment-maps.zip");*/}
+      {/*    }}*/}
+      {/*  >*/}
+      {/*    Download All*/}
+      {/*  </Button>*/}
+      {/*  <Button*/}
+      {/*    disabled={image === null}*/}
+      {/*    onClick={() => {*/}
+      {/*      if (image) downloadBlurredHDR(image, Number.parseFloat(blurSigma));*/}
+      {/*    }}*/}
+      {/*  >*/}
+      {/*    Download Blurred*/}
+      {/*  </Button>*/}
+      {/*  <Button onClick={webGpuTest}>WebGPU test</Button>*/}
+      {/*</Stack>*/}
 
       <StatusTable names={Array.from(items.keys())} />
-      <Container>
-        <PMREMDebug />
-      </Container>
+
+      {/*<Container>*/}
+      {/*  <PMREMDebug />*/}
+      {/*</Container>*/}
       {/*<Container>*/}
       {/*  <CreatePlanesDebug />*/}
       {/*</Container>*/}
-      <Container>
-        <ThreeDebug eff={pmremCubemap} />
-      </Container>
+      {/*<Container>*/}
+      {/*  <ThreeDebug eff={pmremCubemap} />*/}
+      {/*</Container>*/}
       {/*<Container>*/}
       {/*  <OutlierDebug />*/}
       {/*</Container>*/}

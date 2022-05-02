@@ -142,7 +142,7 @@ export class GaussianPositionMap {
 
     const gaussian64x64 = (x: number, y: number) => {
       const m = 32;
-      const s = 2;
+      const s = 10;
       return (
         (1 / (s * (Math.PI * 2))) *
         Math.exp(

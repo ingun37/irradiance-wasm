@@ -60,8 +60,8 @@ export async function damping(
   const changeRx = fromEvent(controls, "change");
 
   controls.enableDamping = true;
-  controls.dampingFactor = 0.3;
-  controls.rotateSpeed = 0.7;
+  controls.dampingFactor = 0.25;
+  controls.rotateSpeed = 1.2;
   merge(extraRx, changeRx)
     .pipe(auditTime(0, animationFrameScheduler))
     .subscribe(() => {

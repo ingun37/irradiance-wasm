@@ -3,6 +3,7 @@ import {
   ACESFilmicToneMapping,
   BoxGeometry,
   Color,
+  DirectionalLight,
   Mesh,
   PerspectiveCamera,
   Scene,
@@ -16,6 +17,21 @@ import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader";
 import { PMREMCubeMapGenerator } from "pmrem-cubemap-generator";
 
 export function pmremCubemap(width: number, height: number, domID: string) {
+  const f = 150 / 255;
+  const l = new Color().setRGB(f, f, f, "srgb-linear");
+  const s = new Color().setRGB(f, f, f, "srgb");
+  console.log(f, l, s);
+  // console.log(
+  //   "linear vari",
+  //   l.clone().convertLinearToSRGB(),
+  //   l.clone().convertSRGBToLinear()
+  // );
+  //
+  // console.log(
+  //   "srgb vari",
+  //   s.clone().convertLinearToSRGB(),
+  //   s.clone().convertSRGBToLinear()
+  // );
   const camera = new PerspectiveCamera(40, width / height, 1, 1000);
   camera.position.set(0, 0, 8);
   const scene = new Scene();
@@ -24,8 +40,8 @@ export function pmremCubemap(width: number, height: number, domID: string) {
   const renderer = new WebGLRenderer();
   document.getElementById(domID).appendChild(renderer.domElement);
 
-  renderer.physicallyCorrectLights = true;
-  renderer.toneMapping = ACESFilmicToneMapping;
+  renderer.physicallyCorrectLights = false;
+  // renderer.toneMapping = ACESFilmicToneMapping;
 
   const pmremGenerator = new PMREMCubeMapGenerator(renderer);
 
@@ -35,6 +51,10 @@ export function pmremCubemap(width: number, height: number, domID: string) {
   const render = () => {
     requestAnimationFrame(() => renderer.render(scene, camera));
   };
+
+  scene.add(new DirectionalLight(l));
+  scene.add(new DirectionalLight(l));
+
   new RGBELoader().load("venetian_crossroads_1k.hdr", (dataTexture) => {
     // hdrCubeMap.magFilter = THREE.LinearFilter;
     // hdrCubeMap.needsUpdate = true;
@@ -45,6 +65,7 @@ export function pmremCubemap(width: number, height: number, domID: string) {
 
     // console.log(renderTarget.texture.mipmaps);
     const mat = new ShaderMaterial({
+      lights: true,
       vertexShader: `
                   varying vec3 vOutputDirection;
 
@@ -55,16 +76,23 @@ export function pmremCubemap(width: number, height: number, domID: string) {
       }
       `,
       fragmentShader: `
+        #include <common>
+      #include <lights_pars_begin>
+
       	varying vec3 vOutputDirection;
       	uniform samplerCube env;
         void main() {
-          gl_FragColor = textureCubeLodEXT(env, normalize(vOutputDirection), 4.0);
+          vec3 aaa = directionalLights[0].color;
+          gl_FragColor = textureCubeLodEXT(env, normalize(vOutputDirection), 4.0) + vec4(aaa,1.0);
           // gl_FragColor = textureCube(env, normalize(vOutputDirection));
         }
       `,
-      uniforms: {
-        env: { value: newEnvMap },
-      },
+      uniforms: THREE.UniformsUtils.merge([
+        THREE.UniformsLib["lights"],
+        {
+          env: { value: newEnvMap },
+        },
+      ]),
     });
 
     const mipmaptest = new Mesh(new BoxGeometry(), mat);
@@ -102,7 +130,7 @@ export function pmremCubemap(width: number, height: number, domID: string) {
   });
 
   //renderer.toneMapping = ReinhardToneMapping;
-  renderer.outputEncoding = THREE.sRGBEncoding;
+  // renderer.outputEncoding = THREE.sRGBEncoding;
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.minDistance = 1;
   controls.maxDistance = 300;

@@ -1,35 +1,23 @@
 import {
   AmbientLight,
-  Box3,
   BufferGeometry,
-  Color,
   DirectionalLight,
-  FloatType,
-  Matrix4,
   Mesh,
-  MeshBasicMaterial,
-  MeshPhongMaterial,
   MeshStandardMaterial,
   NoBlending,
-  Object3D,
   PerspectiveCamera,
   Points,
   PointsMaterial,
-  Raycaster,
-  RGBAFormat,
   Scene,
   ShaderMaterial,
   UniformsUtils,
-  Vector2,
   Vector3,
   WebGLRenderer,
-  WebGLRenderTarget,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { TeapotGeometry } from "three/examples/jsm/geometries/TeapotGeometry";
 import { FullScreenQuad } from "three/examples/jsm/postprocessing/Pass";
 import { CopyShader } from "three/examples/jsm/shaders/CopyShader";
-import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass";
 import { GaussianPositionMap } from "./blanket-algorithm/GaussianPositionMap";
 import { Observable } from "rxjs";
 
@@ -93,8 +81,42 @@ export async function marking(
   copyUniforms["tDiffuse"].value = c.blurXY.texture;
 
   // @ts-ignore
-  window.doo = function () {
+  window.doo = async function () {
     c.updatePositionMap(camera, teapot, scene, renderer);
+
+    // const f = new FormData();
+    // const copy = new Float32Array(c.smallPixelsBuffer);
+    // for (let i = 0; i < copy.length; i += 4) {
+    //   const x = copy[i * 4];
+    //   copy[i * 4] = Math.log(x + 1) / Math.log(1.5);
+    // }
+    // const buf = new Float32Array(
+    //   4 * c.linearDepth.width * c.linearDepth.height
+    // );
+    //
+    // renderer.readRenderTargetPixels(
+    //   c.blurXY,
+    //   0,
+    //   0,
+    //   c.linearDepth.width,
+    //   c.linearDepth.height,
+    //   buf
+    // );
+    // for (let i = 0; i < buf.length; i++) {
+    //   if (buf[i] < 0) buf[i] = -buf[i];
+    // }
+    // f.append("pixels", new Blob([buf]), "blurxy.png");
+    //
+    // const u = new URL("http://localhost:7890/png");
+    // u.searchParams.set("width", c.linearDepth.width.toString());
+    // u.searchParams.set("height", c.linearDepth.height.toString());
+    //
+    // // await fetch("http://localhost:7890/hello").then(console.log);
+    // await fetch(u.toString(), {
+    //   method: "post",
+    //   body: f,
+    // });
+
     //
     // requestAnimationFrame(() => {
     //   renderer.clear();

@@ -10,6 +10,8 @@ import {
   ShaderMaterial,
   WebGLRenderTarget,
   Texture,
+  Mesh,
+  Material,
 } from "three";
 import { Pass } from "three/examples/jsm/postprocessing/Pass";
 
@@ -20,6 +22,7 @@ export class OutlinePass extends Pass {
     camera: Camera,
     selectedObjects?: Object3D[]
   );
+  selectedGroup: Map<Mesh, Material[]>;
   renderScene: Scene;
   renderCamera: Camera;
   selectedObjects: Object3D[];

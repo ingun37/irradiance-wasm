@@ -22,6 +22,8 @@ class OutlinePass extends Pass {
     this.renderScene = scene;
     this.renderCamera = camera;
     this.selectedObjects = selectedObjects !== undefined ? selectedObjects : [];
+    // Mesh => Material[]
+    this.selectedGroup = new Map();
     this.visibleEdgeColor = new Color(1, 1, 1);
     this.hiddenEdgeColor = new Color(0.1, 0.04, 0.02);
     this.edgeGlow = 0.0;
@@ -180,15 +182,20 @@ class OutlinePass extends Pass {
 
   changeVisibilityOfSelectedObjects(bVisible) {
     const cache = this._visibilityCache;
-
+    const selectedGroup = this.selectedGroup;
+    function meshOrMaterialCallback(object) {
+      if (bVisible === true) {
+        object.visible = cache.get(object);
+      } else {
+        cache.set(object, object.visible);
+        object.visible = bVisible;
+      }
+    }
     function gatherSelectedMeshesCallBack(object) {
       if (object.isMesh) {
-        if (bVisible === true) {
-          object.visible = cache.get(object);
-        } else {
-          cache.set(object, object.visible);
-          object.visible = bVisible;
-        }
+        if (selectedGroup.has(object))
+          selectedGroup.get(object).forEach(meshOrMaterialCallback);
+        else meshOrMaterialCallback(object);
       }
     }
 
@@ -200,10 +207,16 @@ class OutlinePass extends Pass {
 
   changeVisibilityOfNonSelectedObjects(bVisible) {
     const cache = this._visibilityCache;
-    const selectedMeshes = [];
-
+    const selectedMeshOrMaterial = [];
+    const selectedGroup = this.selectedGroup;
     function gatherSelectedMeshesCallBack(object) {
-      if (object.isMesh) selectedMeshes.push(object);
+      if (object.isMesh) {
+        if (selectedGroup.has(object))
+          selectedGroup
+            .get(object)
+            .forEach((material) => selectedMeshOrMaterial.push(material));
+        else selectedMeshOrMaterial.push(object);
+      }
     }
 
     for (let i = 0; i < this.selectedObjects.length; i++) {
@@ -211,29 +224,35 @@ class OutlinePass extends Pass {
       selectedObject.traverse(gatherSelectedMeshesCallBack);
     }
 
+    function meshOrMaterialCallback(object) {
+      let bFound = false;
+
+      for (let i = 0; i < selectedMeshOrMaterial.length; i++) {
+        const selectedObjectUUID = selectedMeshOrMaterial[i].uuid;
+
+        if (selectedObjectUUID === object.uuid) {
+          bFound = true;
+          break;
+        }
+      }
+
+      if (bFound === false) {
+        const visibility = object.visible;
+
+        if (bVisible === false || cache.get(object) === true) {
+          object.visible = bVisible;
+        }
+
+        cache.set(object, visibility);
+      }
+    }
     function VisibilityChangeCallBack(object) {
       if (object.isMesh || object.isSprite) {
         // only meshes and sprites are supported by OutlinePass
-
-        let bFound = false;
-
-        for (let i = 0; i < selectedMeshes.length; i++) {
-          const selectedObjectId = selectedMeshes[i].id;
-
-          if (selectedObjectId === object.id) {
-            bFound = true;
-            break;
-          }
-        }
-
-        if (bFound === false) {
-          const visibility = object.visible;
-
-          if (bVisible === false || cache.get(object) === true) {
-            object.visible = bVisible;
-          }
-
-          cache.set(object, visibility);
+        if (selectedGroup.has(object)) {
+          object.material.forEach(meshOrMaterialCallback);
+        } else {
+          meshOrMaterialCallback(object);
         }
       } else if (object.isPoints || object.isLine) {
         // the visibilty of points and lines is always set to false in order to

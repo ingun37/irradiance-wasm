@@ -36,36 +36,33 @@ export function groupGeoOutline(width: number, height: number, domID: string) {
     const { mesh, mA } = makeGroupedSphere();
     scene.add(mesh);
     mesh.translateX(-4);
-    outlinePass.selectedGroup.set(mesh, [mA]);
+    outlinePass.selectedObjects.set(mesh, [mA]);
+    // outlinePass.selectedGroup.set(mesh, [mA]);
     mA.visible = false;
-    outlinePass.selectedObjects.push(mesh);
   }
   {
     const { mesh, mA } = makeGroupedSphere();
     scene.add(mesh);
     mesh.translateX(-2);
-    outlinePass.selectedGroup.set(mesh, [mA]);
-    outlinePass.selectedObjects.push(mesh);
+    outlinePass.selectedObjects.set(mesh, [mA]);
   }
   {
     const { mesh } = makeJustSphere();
     scene.add(mesh);
-    outlinePass.selectedObjects.push(mesh);
+    outlinePass.selectedObjects.set(mesh, null);
   }
   {
     const { mesh, mB } = makeGroupedSphere();
     scene.add(mesh);
     mesh.translateX(2);
-    outlinePass.selectedGroup.set(mesh, [mB]);
-    outlinePass.selectedObjects.push(mesh);
+    outlinePass.selectedObjects.set(mesh, [mB]);
   }
   {
     const { mesh, mB, mA } = makeGroupedSphere();
     scene.add(mesh);
     mesh.translateX(4);
-    outlinePass.selectedGroup.set(mesh, [mB]);
+    outlinePass.selectedObjects.set(mesh, [mB]);
     mA.visible = false;
-    outlinePass.selectedObjects.push(mesh);
   }
   const composer = new EffectComposer(renderer);
   const renderPass = new RenderPass(scene, camera);

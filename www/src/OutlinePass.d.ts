@@ -14,7 +14,7 @@ import {
 } from "three";
 import { Pass } from "three/examples/jsm/postprocessing/Pass";
 
-export class OutlinePass extends Pass {
+export class GGOutlinePass extends Pass {
   constructor(
     resolution: Vector2,
     scene: Scene,

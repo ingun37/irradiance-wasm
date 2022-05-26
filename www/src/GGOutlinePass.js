@@ -15,7 +15,7 @@ import {
 import { FullScreenQuad, Pass } from "three/examples/jsm/postprocessing/Pass";
 import { CopyShader } from "three/examples/jsm/shaders/CopyShader";
 
-class OutlinePass extends Pass {
+class GGOutlinePass extends Pass {
   constructor(resolution, scene, camera, selectedObjects) {
     super();
 
@@ -193,6 +193,7 @@ class OutlinePass extends Pass {
         }
       }
     }
+
     this.selectedObjects.forEach((materials, object) => {
       if (materials) {
         materials.forEach(gatherSelectedMeshesCallBack);
@@ -369,7 +370,7 @@ class OutlinePass extends Pass {
       this.separableBlurMaterial1.uniforms["colorTexture"].value =
         this.renderTargetEdgeBuffer1.texture;
       this.separableBlurMaterial1.uniforms["direction"].value =
-        OutlinePass.BlurDirectionX;
+        GGOutlinePass.BlurDirectionX;
       this.separableBlurMaterial1.uniforms["kernelRadius"].value =
         this.edgeThickness;
       renderer.setRenderTarget(this.renderTargetBlurBuffer1);
@@ -378,7 +379,7 @@ class OutlinePass extends Pass {
       this.separableBlurMaterial1.uniforms["colorTexture"].value =
         this.renderTargetBlurBuffer1.texture;
       this.separableBlurMaterial1.uniforms["direction"].value =
-        OutlinePass.BlurDirectionY;
+        GGOutlinePass.BlurDirectionY;
       renderer.setRenderTarget(this.renderTargetEdgeBuffer1);
       renderer.clear();
       this.fsQuad.render(renderer);
@@ -388,14 +389,14 @@ class OutlinePass extends Pass {
       this.separableBlurMaterial2.uniforms["colorTexture"].value =
         this.renderTargetEdgeBuffer1.texture;
       this.separableBlurMaterial2.uniforms["direction"].value =
-        OutlinePass.BlurDirectionX;
+        GGOutlinePass.BlurDirectionX;
       renderer.setRenderTarget(this.renderTargetBlurBuffer2);
       renderer.clear();
       this.fsQuad.render(renderer);
       this.separableBlurMaterial2.uniforms["colorTexture"].value =
         this.renderTargetBlurBuffer2.texture;
       this.separableBlurMaterial2.uniforms["direction"].value =
-        OutlinePass.BlurDirectionY;
+        GGOutlinePass.BlurDirectionY;
       renderer.setRenderTarget(this.renderTargetEdgeBuffer2);
       renderer.clear();
       this.fsQuad.render(renderer);
@@ -619,7 +620,7 @@ class OutlinePass extends Pass {
   }
 }
 
-OutlinePass.BlurDirectionX = new Vector2(1.0, 0.0);
-OutlinePass.BlurDirectionY = new Vector2(0.0, 1.0);
+GGOutlinePass.BlurDirectionX = new Vector2(1.0, 0.0);
+GGOutlinePass.BlurDirectionY = new Vector2(0.0, 1.0);
 
-export { OutlinePass };
+export { GGOutlinePass };

@@ -13,7 +13,7 @@ import {
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass";
-import { OutlinePass } from "./OutlinePass";
+import { GGOutlinePass } from "./OutlinePass";
 
 export function groupGeoOutline(width: number, height: number, domID: string) {
   const camera = new PerspectiveCamera(40, width / height, 1, 1000);
@@ -27,7 +27,7 @@ export function groupGeoOutline(width: number, height: number, domID: string) {
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(width, height);
 
-  const outlinePass = new OutlinePass(
+  const outlinePass = new GGOutlinePass(
     new Vector2(width, height),
     scene,
     camera

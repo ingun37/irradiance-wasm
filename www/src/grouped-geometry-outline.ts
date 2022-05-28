@@ -13,7 +13,7 @@ import {
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass";
-import { GGOutlinePass } from "./OutlinePass";
+import { GGOutlinePass } from "./GGOutlinePass";
 
 export function groupGeoOutline(width: number, height: number, domID: string) {
   const camera = new PerspectiveCamera(40, width / height, 1, 1000);
@@ -52,11 +52,26 @@ export function groupGeoOutline(width: number, height: number, domID: string) {
     outlinePass.selectedObjects.set(mesh, null);
   }
   {
+    const { mesh } = makeGroupedSphere();
+    scene.add(mesh);
+    // mesh.translateX(2);
+    mesh.translateY(3);
+    outlinePass.selectedObjects.set(mesh, null);
+  }
+  {
+    const { mesh } = makeJustSphere();
+    scene.add(mesh);
+    // mesh.translateX(2);
+    mesh.translateY(-3);
+    outlinePass.selectedObjects.set(mesh, null);
+  }
+  {
     const { mesh, mB } = makeGroupedSphere();
     scene.add(mesh);
     mesh.translateX(2);
     outlinePass.selectedObjects.set(mesh, [mB]);
   }
+
   {
     const { mesh, mB, mA } = makeGroupedSphere();
     scene.add(mesh);

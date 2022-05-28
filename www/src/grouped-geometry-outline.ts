@@ -13,7 +13,7 @@ import {
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass";
-import { GGOutlinePass } from "./GGOutlinePass";
+import { OutlinePass } from "./GGOutlinePass";
 
 export function groupGeoOutline(width: number, height: number, domID: string) {
   const camera = new PerspectiveCamera(40, width / height, 1, 1000);
@@ -22,12 +22,12 @@ export function groupGeoOutline(width: number, height: number, domID: string) {
   scene.background = new Color(0xf00000);
 
   const renderer = new WebGLRenderer();
-  document.getElementById(domID).appendChild(renderer.domElement);
+  document.getElementById(domID)!.appendChild(renderer.domElement);
 
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(width, height);
 
-  const outlinePass = new GGOutlinePass(
+  const outlinePass = new OutlinePass(
     new Vector2(width, height),
     scene,
     camera
@@ -36,7 +36,7 @@ export function groupGeoOutline(width: number, height: number, domID: string) {
     const { mesh, mA } = makeGroupedSphere();
     scene.add(mesh);
     mesh.translateX(-4);
-    outlinePass.selectedObjects.set(mesh, [mA]);
+    outlinePass.selectedMaterialGroups.set(mesh, [mA]);
     // outlinePass.selectedGroup.set(mesh, [mA]);
     mA.visible = false;
   }
@@ -44,39 +44,39 @@ export function groupGeoOutline(width: number, height: number, domID: string) {
     const { mesh, mA } = makeGroupedSphere();
     scene.add(mesh);
     mesh.translateX(-2);
-    outlinePass.selectedObjects.set(mesh, [mA]);
+    outlinePass.selectedMaterialGroups.set(mesh, [mA]);
   }
   {
     const { mesh } = makeJustSphere();
     scene.add(mesh);
-    outlinePass.selectedObjects.set(mesh, null);
+    outlinePass.selectedObjects.push(mesh);
   }
   {
     const { mesh } = makeGroupedSphere();
     scene.add(mesh);
     // mesh.translateX(2);
     mesh.translateY(3);
-    outlinePass.selectedObjects.set(mesh, null);
+    outlinePass.selectedObjects.push(mesh);
   }
   {
     const { mesh } = makeJustSphere();
     scene.add(mesh);
     // mesh.translateX(2);
     mesh.translateY(-3);
-    outlinePass.selectedObjects.set(mesh, null);
+    outlinePass.selectedObjects.push(mesh);
   }
   {
     const { mesh, mB } = makeGroupedSphere();
     scene.add(mesh);
     mesh.translateX(2);
-    outlinePass.selectedObjects.set(mesh, [mB]);
+    outlinePass.selectedMaterialGroups.set(mesh, [mB]);
   }
 
   {
     const { mesh, mB, mA } = makeGroupedSphere();
     scene.add(mesh);
     mesh.translateX(4);
-    outlinePass.selectedObjects.set(mesh, [mB]);
+    outlinePass.selectedMaterialGroups.set(mesh, [mB]);
     mA.visible = false;
   }
   const composer = new EffectComposer(renderer);

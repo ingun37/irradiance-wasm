@@ -1,10 +1,10 @@
 import {
+  AdditiveBlending,
   Color,
   DoubleSide,
   Matrix4,
   MeshDepthMaterial,
   NoBlending,
-  NormalBlending,
   RGBADepthPacking,
   ShaderMaterial,
   UniformsUtils,
@@ -15,15 +15,21 @@ import {
 import { FullScreenQuad, Pass } from "three/examples/jsm/postprocessing/Pass";
 import { CopyShader } from "three/examples/jsm/shaders/CopyShader";
 
-class GGOutlinePass extends Pass {
-  constructor(resolution, scene, camera, selectedObjects) {
+class OutlinePass extends Pass {
+  constructor(
+    resolution,
+    scene,
+    camera,
+    selectedObjects,
+    selectedMaterialGroups
+  ) {
     super();
 
     this.renderScene = scene;
     this.renderCamera = camera;
-    this.selectedObjects =
-      selectedObjects !== undefined ? selectedObjects : new Map();
-    // Mesh => Material[]
+    this.selectedObjects = selectedObjects !== undefined ? selectedObjects : [];
+    this.selectedMaterialGroups =
+      selectedMaterialGroups !== undefined ? selectedMaterialGroups : new Map();
     this.visibleEdgeColor = new Color(1, 1, 1);
     this.hiddenEdgeColor = new Color(0.1, 0.04, 0.02);
     this.edgeGlow = 0.0;
@@ -194,44 +200,71 @@ class GGOutlinePass extends Pass {
       }
     }
 
-    this.selectedObjects.forEach((materials, object) => {
-      if (materials) {
-        materials.forEach(gatherSelectedMeshesCallBack);
-      } else {
-        object.traverse(gatherSelectedMeshesCallBack);
-      }
-    });
+    for (let i = 0; i < this.selectedObjects.length; i++) {
+      const selectedObject = this.selectedObjects[i];
+      selectedObject.traverse(gatherSelectedMeshesCallBack);
+    }
+
+    for (const [, materials] of this.selectedMaterialGroups.entries()) {
+      materials.forEach(gatherSelectedMeshesCallBack);
+    }
   }
 
   changeVisibilityOfNonSelectedObjects(bVisible) {
     const cache = this._visibilityCache;
     const selectedMeshes = [];
-    const selectedRoots = [];
+    const selectedMaterials = [];
+    const groupedMeshes = [];
     function gatherSelectedMeshesCallBack(object) {
       if (object.isMesh) selectedMeshes.push(object);
     }
 
-    this.selectedObjects.forEach((materials, object) => {
-      if (materials) {
-        if (0 < materials.length) {
-          selectedRoots.push(object);
-          materials.forEach((material) => selectedMeshes.push(material));
-        }
-      } else {
-        object.traverse(gatherSelectedMeshesCallBack);
+    for (let i = 0; i < this.selectedObjects.length; i++) {
+      const selectedObject = this.selectedObjects[i];
+      selectedObject.traverse(gatherSelectedMeshesCallBack);
+    }
+
+    for (const [mesh, materials] of this.selectedMaterialGroups) {
+      groupedMeshes.push(mesh);
+      for (const material of materials) {
+        selectedMaterials.push(material);
       }
-    });
+    }
 
     function VisibilityChangeCallBack(object) {
       if (!object) return;
       if (object.isMesh || object.isSprite || object.isMaterial) {
         // only meshes and sprites are supported by OutlinePass
 
-        let isSelected = selectedMeshes.includes(object);
-        let isRoot = selectedRoots.includes(object);
+        let bFound = false;
+        let bGrouped = false;
+        for (let i = 0; i < selectedMeshes.length; i++) {
+          const selectedObjectId = selectedMeshes[i].id;
 
-        if (isRoot) object.material.forEach(VisibilityChangeCallBack);
-        else if (!isSelected) {
+          if (selectedObjectId === object.id) {
+            bFound = true;
+            break;
+          }
+        }
+
+        for (let i = 0; i < selectedMaterials.length; i++) {
+          const selectedMaterialId = selectedMaterials[i].id;
+
+          if (selectedMaterialId === object.id) {
+            bFound = true;
+            break;
+          }
+        }
+
+        for (let i = 0; i < groupedMeshes.length; i++) {
+          const groupedMeshId = groupedMeshes[i].id;
+          if (groupedMeshId === object.id) {
+            bGrouped = true;
+            break;
+          }
+        }
+        if (bGrouped) object.material.forEach(VisibilityChangeCallBack);
+        else if (!bFound) {
           const visibility = object.visible;
 
           if (bVisible === false || cache.get(object) === true) {
@@ -280,7 +313,10 @@ class GGOutlinePass extends Pass {
   }
 
   render(renderer, writeBuffer, readBuffer, deltaTime, maskActive) {
-    if (this.selectedObjects.size > 0) {
+    if (
+      this.selectedObjects.length > 0 ||
+      this.selectedMaterialGroups.size > 0
+    ) {
       renderer.getClearColor(this._oldClearColor);
       this.oldClearAlpha = renderer.getClearAlpha();
       const oldAutoClear = renderer.autoClear;
@@ -371,7 +407,7 @@ class GGOutlinePass extends Pass {
       this.separableBlurMaterial1.uniforms["colorTexture"].value =
         this.renderTargetEdgeBuffer1.texture;
       this.separableBlurMaterial1.uniforms["direction"].value =
-        GGOutlinePass.BlurDirectionX;
+        OutlinePass.BlurDirectionX;
       this.separableBlurMaterial1.uniforms["kernelRadius"].value =
         this.edgeThickness;
       renderer.setRenderTarget(this.renderTargetBlurBuffer1);
@@ -380,7 +416,7 @@ class GGOutlinePass extends Pass {
       this.separableBlurMaterial1.uniforms["colorTexture"].value =
         this.renderTargetBlurBuffer1.texture;
       this.separableBlurMaterial1.uniforms["direction"].value =
-        GGOutlinePass.BlurDirectionY;
+        OutlinePass.BlurDirectionY;
       renderer.setRenderTarget(this.renderTargetEdgeBuffer1);
       renderer.clear();
       this.fsQuad.render(renderer);
@@ -390,14 +426,14 @@ class GGOutlinePass extends Pass {
       this.separableBlurMaterial2.uniforms["colorTexture"].value =
         this.renderTargetEdgeBuffer1.texture;
       this.separableBlurMaterial2.uniforms["direction"].value =
-        GGOutlinePass.BlurDirectionX;
+        OutlinePass.BlurDirectionX;
       renderer.setRenderTarget(this.renderTargetBlurBuffer2);
       renderer.clear();
       this.fsQuad.render(renderer);
       this.separableBlurMaterial2.uniforms["colorTexture"].value =
         this.renderTargetBlurBuffer2.texture;
       this.separableBlurMaterial2.uniforms["direction"].value =
-        GGOutlinePass.BlurDirectionY;
+        OutlinePass.BlurDirectionY;
       renderer.setRenderTarget(this.renderTargetEdgeBuffer2);
       renderer.clear();
       this.fsQuad.render(renderer);
@@ -613,7 +649,7 @@ class GGOutlinePass extends Pass {
 						finalColor += + visibilityFactor * (1.0 - maskColor.r) * (1.0 - patternColor.r);
 					gl_FragColor = finalColor;
 				}`,
-      blending: NormalBlending,
+      blending: AdditiveBlending,
       depthTest: false,
       depthWrite: false,
       transparent: true,
@@ -621,7 +657,7 @@ class GGOutlinePass extends Pass {
   }
 }
 
-GGOutlinePass.BlurDirectionX = new Vector2(1.0, 0.0);
-GGOutlinePass.BlurDirectionY = new Vector2(0.0, 1.0);
+OutlinePass.BlurDirectionX = new Vector2(1.0, 0.0);
+OutlinePass.BlurDirectionY = new Vector2(0.0, 1.0);
 
-export { GGOutlinePass };
+export { OutlinePass };

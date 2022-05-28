@@ -14,16 +14,18 @@ import {
 } from "three";
 import { Pass } from "three/examples/jsm/postprocessing/Pass";
 
-export class GGOutlinePass extends Pass {
+export class OutlinePass extends Pass {
   constructor(
     resolution: Vector2,
     scene: Scene,
     camera: Camera,
-    selectedObjects?: Object3D[]
+    selectedObjects?: Object3D[],
+    selectedMaterialGroups?: Map<Object3D, Material[] | null>
   );
   renderScene: Scene;
   renderCamera: Camera;
-  selectedObjects: Map<Object3D, Material[] | null>;
+  selectedObjects: Object3D[];
+  selectedMaterialGroups: Map<Object3D, Material[] | null>;
   visibleEdgeColor: Color;
   hiddenEdgeColor: Color;
   edgeGlow: number;

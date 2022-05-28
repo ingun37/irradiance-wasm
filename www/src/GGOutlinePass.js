@@ -206,15 +206,17 @@ class GGOutlinePass extends Pass {
   changeVisibilityOfNonSelectedObjects(bVisible) {
     const cache = this._visibilityCache;
     const selectedMeshes = [];
-
+    const selectedRoots = [];
     function gatherSelectedMeshesCallBack(object) {
       if (object.isMesh) selectedMeshes.push(object);
     }
 
     this.selectedObjects.forEach((materials, object) => {
       if (materials) {
-        selectedMeshes.push(object);
-        materials.forEach((material) => selectedMeshes.push(material));
+        if (0 < materials.length) {
+          selectedRoots.push(object);
+          materials.forEach((material) => selectedMeshes.push(material));
+        }
       } else {
         object.traverse(gatherSelectedMeshesCallBack);
       }
@@ -225,9 +227,11 @@ class GGOutlinePass extends Pass {
       if (object.isMesh || object.isSprite || object.isMaterial) {
         // only meshes and sprites are supported by OutlinePass
 
-        let bFound = selectedMeshes.includes(object);
+        let isSelected = selectedMeshes.includes(object);
+        let isRoot = selectedRoots.includes(object);
 
-        if (bFound === false) {
+        if (isRoot) object.material.forEach(VisibilityChangeCallBack);
+        else if (!isSelected) {
           const visibility = object.visible;
 
           if (bVisible === false || cache.get(object) === true) {
@@ -236,9 +240,6 @@ class GGOutlinePass extends Pass {
 
           cache.set(object, visibility);
         }
-
-        if (Array.isArray(object.material))
-          object.material.forEach(VisibilityChangeCallBack);
       } else if (object.isPoints || object.isLine) {
         // the visibilty of points and lines is always set to false in order to
         // not affect the outline computation
